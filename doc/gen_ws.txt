@@ -1,0 +1,146 @@
+Descrição do gen_ws:
+
+Analogia:
+	gen_tcp e gen_udp
+
+Proposta da API:
+# Inicializacao
+connect()
+listen()
+
+# Ciclo Principal
+accept()
+recv()
+send()
+close()
+
+# Informacoes
+geturl()
+getsubprotocol()
+getstat()
+getopts()
+
+# outros
+controlling_process()
+
+Detalhamento da API:
+Connect do TCP:
+gen_tcp:connect(Address, Port, Options) -> {ok, Socket}|{error, Reason}
+gen_tcp:connect(Address, Port, Options, Timeout) -> {ok, Socket}|{error, Reason}
+	Address = string()|atom()|ip_address()
+	Port = 0..65535
+	Options = [Opt]
+	Timeout = int()|infinity
+	Socket = socket()
+	Reason = posix()
+
+Equivalente do UDP:
+gen_udp:open(Port) -> {ok, Socket}|{error, Reason}
+gen_udp:open(Port, Options) -> {ok, Socket}|{error, Reason}
+	Port = 0..65535
+	Options = [Opt]
+	Socket = socket()
+	Reason = posix()
+
+Proposta para o WebSocket Connect:
+gen_ws:connect(Url) -> {ok, WsSock}|{error, Reason}
+gen_ws:connect(Url, Options) -> {ok, WsSock}|{error, Reason}
+
+
+Listen do TCP:
+gen_tcp:listen(Port, Options) -> {ok, ListenSocket}|{error, Reason}
+	Port = 0..65535
+	Options = [Opt]
+	Socket = socket()
+	Reason = posix()
+
+Proposta para o WebSocket Listen:
+gen_ws:listen(Port, Options) -> {ok, ListenWsSock}|{error, Reason}
+	Port = 0..65535
+	Options = [Opt]
+	Socket = socket()
+	Reason = posix()
+
+Accept do TCP:
+gen_tcp:accept(ListenSocket) -> {ok, Socket}|{error, Reason}
+gen_tcp:accept(ListenSocket, Timeout) -> {ok, Socket}|{error, Reason}
+
+Proposta para o WebSocket Accept:
+gen_tcp:accept(ListenWsSocket) -> {ok, Socket}|{error, Reason} #HsOptions Default
+gen_tcp:accept(ListenWsSock, HsOptions) -> {ok, Socket}|{error, Reason}
+gen_tcp:accept(ListenWsSock, HsOptions, Timeout) -> {ok, Socket}|{error, Reason}
+	HsOptions = [HsOpt]
+
+
+Receive do TCP:
+gen_tcp:recv(Socket, Length) -> {ok, Packet}|{error, Reason}
+gen_tcp:recv(Socket, Length, Timeout) -> {ok, Packet}|{error|Reason}
+	Socket = socket()
+	Length = int()
+	Packet = [char()],binary()
+	Timeout = int()|infinity
+	Reason = closed|posix()
+
+Receive do UDP:
+gen_udp:recv(Socket, Length) -> {ok, {Address, Port, Packet}}|{error, Reason}
+gen_udp:recv(Socket, Length, Timeout) -> {ok, {Address, Port, Packet}}|{error|Reason}
+	Socket = socket()
+	Length = int()
+	Address = ip_address()
+	Port = 0..65535
+	Packet = [char()], binary
+	Timeout = int()|infinty
+	Reason = not_owner|posix()
+
+Proposta para o WebSocket Receive:
+gen_ws:recv(WsSock) -> {ok, {Type, Data}}|{error, Reason}
+gen_ws:recv(WsSock, Timeout) -> {ok, {Type, Data}}|{error, Reason}
+	Type = text|binary
+	Data = [char()]|binary
+	Timeout = int()|infinity
+
+
+Send do TCP:
+gen_tcp:send(Socket, Packet) -> ok|{error|Reason}
+	Socket = socket()
+	Packet = [char()]|binary()
+	Reason = posix()
+
+Send do UDP:
+gen_udp:send(Socket, Address, Port, Packet) -> ok|{error, Reason}
+	Socket = socket()
+	Address = string()|atom()|ip_address()
+	Port = 0..65535
+	Packet = [char()],binary()
+	Reason = not_owner|posix()
+
+Proposta para o WebSocket Send:
+gen_ws:send(WsSock, {Type, Data}) -> ok|{error, Reason}
+	Type = text|binary
+	Data = [char()]|binary()
+
+
+Close do TCP:
+gen_tcp:close(Socket) -> ok|{error, Reason}
+
+Close do UDP:
+gen_udp:close(Socket) -> ok|{error, Reason}
+
+Proposta para o WebSocket Close:
+gen_ws:close(WsSock) -> ok|{error, Reason}
+
+
+Proposta para o WebSocket geturl:
+gen_ws:geturl(WsSock) -> {ok, Url}|{error, Reason}
+	Url = websocket_url()
+
+Proposta para o WebSocket getsubprotocol:
+gen_ws:getsubprotocol(WsSock) -> {ok, Subprotocol}|{error, Reason}
+	Subprotocol = string()|undefined
+
+Proposta para o WebSocket getstate:
+gen_ws:getstat(WsSock) -> {ok,Status}|{error,Posix}.
+	Status = connecting|open|closing|closed|listen
+
+Proposta para o WebSocket getopts:
+
