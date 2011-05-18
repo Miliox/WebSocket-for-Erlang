@@ -139,7 +139,7 @@ gen_ws:getsubprotocol(WsSock) -> {ok, Subprotocol}|{error, Reason}
 	Subprotocol = string()|undefined
 
 Proposta para o WebSocket getstate:
-gen_ws:getstat(WsSock) -> {ok,Status}|{error,Posix}.
+gen_ws:getstate(WsSock) -> {ok,Status}|{error,Posix}.
 	Status = connecting|open|closing|closed|listen
 
 Proposta para o WebSocket getopts:

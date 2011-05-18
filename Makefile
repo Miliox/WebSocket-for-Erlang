@@ -6,7 +6,7 @@ SHELL=/bin/sh
 
 #Erlang Configuration
 PADIR=-pa ebin
-MODULELIST=[]
+MODULELIST=[gen_ws]
 
 run: all_test
 	erl $(PADIR)
