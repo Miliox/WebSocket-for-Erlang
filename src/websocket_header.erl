@@ -30,6 +30,7 @@ parse_request(Header) when is_list(Header) ->
 parse_request(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 request_field_list(Line) ->
 	case re:run(Line, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
@@ -37,11 +38,11 @@ request_field_list(Line) ->
 		nomatch ->
 			erlang:error("invalid-request-syntax")
 	end.
+%------------------------------------------------------------------------------
 map_field(Lines) ->
 	Line2Field = fun(Line) -> line_to_field(Line) end,
-
 	lists:map(Line2Field, Lines).
-
+%------------------------------------------------------------------------------
 line_to_field(Line) ->
 	case re:run(Line, ?RE_FIELD, ?RE_FIELD_OPT) of
 		{match, [Name, Value]} ->
@@ -49,6 +50,5 @@ line_to_field(Line) ->
 		nomatch ->
 			field(undefined, Line)
 	end.
-
-field(K, V) ->
-	{K, V}.
+%------------------------------------------------------------------------------
+field(K, V) -> {K, V}.

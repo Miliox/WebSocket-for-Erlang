@@ -26,3 +26,7 @@ test: all_test
 	-eval "eunit:test($(MODULELIST),[verbose])" \
 	-s init stop
 
+test_verbose: test
+	erl -noshell $(PADIR) \
+	-eval "websocket_header_tests:parse_request_test()" \
+	-s init stop
