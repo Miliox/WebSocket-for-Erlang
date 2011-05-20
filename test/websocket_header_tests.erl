@@ -15,7 +15,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 parse_request_test() ->
-	WebSocketRequest = 
+	WsRequestHx7 = 
 		"GET /chat HTTP/1.1\r\n" ++
 		"Host: server.example.com\r\n" ++
 		"Upgrade: websocket\r\n" ++
@@ -24,7 +24,7 @@ parse_request_test() ->
 		"Sec-WebSocket-Origin: http://example.com\r\n" ++
 		"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
 		"Sec-WebSocket-Version: 7\r\n\r\n",
-	WsExpected = [
+	WsExpectedHx7 = [
 		{method, "GET"}, {path, "/chat"}, {"Host", "server.example.com"},
 		{"Upgrade", "websocket"}, {"Connection", "Upgrade"}, 
 		{"Sec-WebSocket-Key", "dGhlIHNbXBsZSBub25jZQ=="},
@@ -32,6 +32,52 @@ parse_request_test() ->
 		{"Sec-WebSocket-Protocol", "chat, superchat"},
 		{"Sec-WebSocket-Version", "7"}, {undefined, []}
 	],
-	WsResult = websocket_header:parse_request(WebSocketRequest),
-	io:format("~p", [WsResult]),
-	?assertEqual(WsResult, WsExpected).
+	WsResultHx7 = websocket_header:parse_request(WsRequestHx7),
+	imprime(WsResultHx7, WsExpectedHx7),
+
+	WsRequestHx0 = 
+		"GET /demo HTTP/1.1\r\n" ++
+		"Host: example.com\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"Sec-WebSocket-Key2: 12998 5 Y3 1  .P00\r\n" ++
+		"Sec-WebSocket-Protocol: sample\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5\r\n" ++
+		"Origin: http://example.com\r\n" ++
+		"\r\n^:ds[4U",
+	WsExpectedHx0 = [
+		{method, "GET"}, {path, "/demo"}, {"Host", "example.com"},
+		{"Connection", "Upgrade"}, 
+		{"Sec-WebSocket-Key2", "12998 5 Y3 1  .P00"},
+		{"Sec-WebSocket-Protocol", "sample"},
+		{"Upgrade", "WebSocket"},
+		{"Sec-WebSocket-Key1", "4 @1  46546xW%0l 1 5"},
+		{"Origin", "http://example.com"},
+		{undefined, "^:ds[4U"}
+	],
+	WsResultHx0 = websocket_header:parse_request(WsRequestHx0),
+	imprime(WsResultHx0, WsExpectedHx0),
+
+	WsRequestH75 = 
+		"GET /demo HTTP/1.1\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"Host: example.com\r\n" ++
+		"Origin: http://example.com\r\n" ++
+		"WebSocket-Protocol: sample\r\n\r\n",
+
+	WsExpectedH75 = [
+		{method, "GET"}, {path, "/demo"}, {"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"}, {"Host", "example.com"},
+		{"Origin", "http://example.com"}, {"WebSocket-Protocol", "sample"},
+		{undefined, []}
+	],
+	WsResultH75 = websocket_header:parse_request(WsRequestH75),
+	imprime(WsResultH75, WsExpectedH75),
+	[
+		?assertEqual(WsResultH75, WsExpectedH75),
+		?assertEqual(WsResultHx0, WsExpectedHx0),
+		?assertEqual(WsResultHx7, WsExpectedHx7)].
+
+imprime(Resultado, Esperado) ->
+	io:format("resultado: ~p~nesperado: ~p~n", [Resultado, Esperado]).
