@@ -10,38 +10,30 @@
 
 -module(websocket_header).
 -author("elmiliox@gmail.com").
--vsn(1).
+-vsn(2).
 
 -export([parse_request/1]).
+-include("websocket_header.hrl").
 
--define(RE_HTTP_METHOD, "[A-Z]+").
--define(RE_HTTP_URI,   "/[^ ]*").
--define(RE_REQ, "^(" ++ ?RE_HTTP_METHOD ++ ") ("++ ?RE_HTTP_URI ++") HTTP/1.1$").
-
--define(RE_FIELD_NAME, "[^:]+").
--define(RE_FIELD_VALUE, "[^$]+").
--define(RE_FIELD, "^("++ ?RE_FIELD_NAME  ++"): ("++ ?RE_FIELD_VALUE ++")$").
-
--define(RE_LINES, "[\r\n]+").
--define(RE_LINES_OPT, [{return, list}]).
--define(RE_FIELD_OPT, [{capture, all_but_first, list}]).
--define(RE_REQ_OPT, ?RE_FIELD_OPT).
 %------------------------------------------------------------------------------
+% HTTP Header -> [{Key, Value}, ...]
 parse_request(Header) when is_binary(Header) ->
 	parse_request(binary_to_list(Header));
-parse_request(Header) ->
+parse_request(Header) when is_list(Header) ->
 	[RequestLine|FieldLines] = 
 		re:split(Header, ?RE_LINES, ?RE_LINES_OPT),
 
-	RequestField = map_request(RequestLine),
+	RequestField = request_field_list(RequestLine),
 	HeaderFields = map_field(FieldLines),
 
-	RequestField ++ HeaderFields.
+	RequestField ++ HeaderFields;
+parse_request(_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
-map_request(Line) ->
+request_field_list(Line) ->
 	case re:run(Line, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
-			[{method, Method}, {path, Path}];
+			[field(method, Method), field(path, Path)];
 		nomatch ->
 			erlang:error("invalid-request-syntax")
 	end.
@@ -52,10 +44,11 @@ map_field(Lines) ->
 
 line_to_field(Line) ->
 	case re:run(Line, ?RE_FIELD, ?RE_FIELD_OPT) of
-		{match, [Key, Value]} ->
-			{Key, Value};
+		{match, [Name, Value]} ->
+			field(Name, Value);
 		nomatch ->
-			{undefined, Line}
+			field(undefined, Line)
 	end.
 
-		
+field(K, V) ->
+	{K, V}.

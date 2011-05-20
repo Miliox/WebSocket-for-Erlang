@@ -5,6 +5,20 @@
 %% Objetivo : Definicao das constantes existentes no cabecalho websocket
 %% Criado: 05/18/11 22:56:32 (HPC)
 
+%% Expressoes Regulares
+-define(RE_HTTP_METHOD, "[A-Z]+").
+-define(RE_HTTP_URI,   "/[^ ]*").
+-define(RE_REQ, "^("++ ?RE_HTTP_METHOD ++") ("++ ?RE_HTTP_URI ++") HTTP/1.1$").
+
+-define(RE_FIELD_NAME, "[^:]+").
+-define(RE_FIELD_VALUE, "[^$]+").
+-define(RE_FIELD, "^("++ ?RE_FIELD_NAME  ++"): ("++ ?RE_FIELD_VALUE ++")$").
+
+-define(RE_LINES, "[\r\n]+").
+-define(RE_LINES_OPT, [{return, list}]).
+-define(RE_FIELD_OPT, [{capture, all_but_first, list}]).
+-define(RE_REQ_OPT, ?RE_FIELD_OPT).
+
 %% Http Like HandShake
 -define(HOST,    "Host").
 -define(UPGRADE, "Upgrade").
@@ -29,3 +43,4 @@
 -define(HYBI_KEY,     "Sec-WebSocket-Key").
 -define(HYBI_LOCAL,   "Sec-WebSocket-Location").
 -define(HYBI_VERSION, "Sec-WebSocket-Version").
+
