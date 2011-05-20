@@ -13,3 +13,25 @@
 -vsn(1).
 
 -include_lib("eunit/include/eunit.hrl").
+
+parse_request_test() ->
+	WebSocketRequest = 
+		"GET /chat HTTP/1.1\r\n" ++
+		"Host: server.example.com\r\n" ++
+		"Upgrade: websocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"Sec-WebSocket-Key: dGhlIHNbXBsZSBub25jZQ==\r\n" ++
+		"Sec-WebSocket-Origin: http://example.com\r\n" ++
+		"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
+		"Sec-WebSocket-Version: 7\r\n\r\n",
+	WsExpected = [
+		{method, "GET"}, {path, "/chat"}, {"Host", "server.example.com"},
+		{"Upgrade", "websocket"}, {"Connection", "Upgrade"}, 
+		{"Sec-WebSocket-Key", "dGhlIHNbXBsZSBub25jZQ=="},
+		{"Sec-WebSocket-Origin", "http://example.com"},
+		{"Sec-WebSocket-Protocol", "chat, superchat"},
+		{"Sec-WebSocket-Version", "7"}, {undefined, []}
+	],
+	WsResult = websocket_header:parse_request(WebSocketRequest),
+	io:format("~p", [WsResult]),
+	?assertEqual(WsResult, WsExpected).
