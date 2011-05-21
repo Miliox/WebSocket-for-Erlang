@@ -27,7 +27,13 @@ parse_request_test() ->
 %------------------------------------------------------------------------------
 parse_response_test() ->
 	{WsResultH75, WsExpectedH75} = parse_response_test_ws_hixie75(),
-	[?assertEqual(WsResultH75, WsExpectedH75)].
+	{WsResultH76, WsExpectedH76} = parse_response_test_ws_hixie76(),
+	{WsResultHb7, WsExpectedHb7} = parse_response_test_ws_hybi7(),
+	[
+		?assertEqual(WsResultH75, WsExpectedH75),
+		?assertEqual(WsResultH76, WsExpectedH76),
+		?assertEqual(WsResultHb7, WsExpectedHb7)
+	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 print(Result, Expected) ->
@@ -125,6 +131,47 @@ parse_response_test_ws_hixie75() ->
 		{"WebSocket-Origin", "http://example.com"},
 		{"WebSocket-Location", "ws://example.com/demo"},
 		{"WebSocket-Protocol", "sample"},
+		{undefined, []}
+		],
+	Result = websocket_header:parse_response(ResponseSample),
+	print(Result, Expected),
+	{Result, Expected}.
+parse_response_test_ws_hixie76() ->
+	ResponseSample = 
+		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"WebSocket-Origin: http://example.com\r\n" ++
+		"WebSocket-Location: ws://example.com/demo\r\n" ++
+		"WebSocket-Protocol: sample\r\n\r\n" ++
+		"8jKS'y:G*Co,Wxa-",
+	Expected = [
+		{status, "101"},
+		{reason, "Web Socket Protocol Handshake"},
+		{"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"},
+		{"WebSocket-Origin", "http://example.com"},
+		{"WebSocket-Location", "ws://example.com/demo"},
+		{"WebSocket-Protocol", "sample"},
+		{undefined, "8jKS'y:G*Co,Wxa-"}
+		],
+	Result = websocket_header:parse_response(ResponseSample),
+	print(Result, Expected),
+	{Result, Expected}.
+parse_response_test_ws_hybi7() ->
+	ResponseSample = 
+		"HTTP/1.1 101 Switching Protocols\r\n" ++
+		"Upgrade: websocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n" ++
+		"Sec-WebSocket-Protocol: chat\r\n\r\n",
+	Expected = [
+		{status, "101"},
+		{reason, "Switching Protocols"},
+		{"Upgrade", "websocket"},
+		{"Connection", "Upgrade"},
+		{"Sec-WebSocket-Accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="},
+		{"Sec-WebSocket-Protocol", "chat"},
 		{undefined, []}
 		],
 	Result = websocket_header:parse_response(ResponseSample),
