@@ -61,6 +61,26 @@ parse_request_hixie75() ->
 		{undefined, []}
 	],
 	parse_test_1(RequestSample, Expected).
+parse_response_hixie75() ->
+	ResponseSample = 
+		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"WebSocket-Origin: http://example.com\r\n" ++
+		"WebSocket-Location: ws://example.com/demo\r\n" ++
+		"WebSocket-Protocol: sample\r\n\r\n",
+	Expected = [
+		{status, "101"},
+		{reason, "Web Socket Protocol Handshake"},
+		{"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"},
+		{"WebSocket-Origin", "http://example.com"},
+		{"WebSocket-Location", "ws://example.com/demo"},
+		{"WebSocket-Protocol", "sample"},
+		{undefined, []}
+		],
+	parse_test_1(ResponseSample, Expected).
+%------------------------------------------------------------------------------
 parse_request_hixie76() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
@@ -85,6 +105,27 @@ parse_request_hixie76() ->
 		{undefined, "^:ds[4U"}
 	],
 	parse_test_1(RequestSample, Expected).
+parse_response_hixie76() ->
+	ResponseSample = 
+		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"WebSocket-Origin: http://example.com\r\n" ++
+		"WebSocket-Location: ws://example.com/demo\r\n" ++
+		"WebSocket-Protocol: sample\r\n\r\n" ++
+		"8jKS'y:G*Co,Wxa-",
+	Expected = [
+		{status, "101"},
+		{reason, "Web Socket Protocol Handshake"},
+		{"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"},
+		{"WebSocket-Origin", "http://example.com"},
+		{"WebSocket-Location", "ws://example.com/demo"},
+		{"WebSocket-Protocol", "sample"},
+		{undefined, "8jKS'y:G*Co,Wxa-"}
+		],
+	parse_test_1(ResponseSample, Expected).
+%------------------------------------------------------------------------------
 parse_request_hybi_07() ->
 	RequestSample = 
 		"GET /chat HTTP/1.1\r\n" ++
@@ -108,46 +149,6 @@ parse_request_hybi_07() ->
 		{undefined, []}
 	],
 	parse_test_1(RequestSample, Expected).
-%------------------------------------------------------------------------------
-parse_response_hixie75() ->
-	ResponseSample = 
-		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"WebSocket-Origin: http://example.com\r\n" ++
-		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n\r\n",
-	Expected = [
-		{status, "101"},
-		{reason, "Web Socket Protocol Handshake"},
-		{"Upgrade", "WebSocket"},
-		{"Connection", "Upgrade"},
-		{"WebSocket-Origin", "http://example.com"},
-		{"WebSocket-Location", "ws://example.com/demo"},
-		{"WebSocket-Protocol", "sample"},
-		{undefined, []}
-		],
-	parse_test_1(ResponseSample, Expected).
-parse_response_hixie76() ->
-	ResponseSample = 
-		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"WebSocket-Origin: http://example.com\r\n" ++
-		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n\r\n" ++
-		"8jKS'y:G*Co,Wxa-",
-	Expected = [
-		{status, "101"},
-		{reason, "Web Socket Protocol Handshake"},
-		{"Upgrade", "WebSocket"},
-		{"Connection", "Upgrade"},
-		{"WebSocket-Origin", "http://example.com"},
-		{"WebSocket-Location", "ws://example.com/demo"},
-		{"WebSocket-Protocol", "sample"},
-		{undefined, "8jKS'y:G*Co,Wxa-"}
-		],
-	parse_test_1(ResponseSample, Expected).
 parse_response_hybi_07() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Switching Protocols\r\n" ++
