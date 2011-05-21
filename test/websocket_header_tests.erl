@@ -16,30 +16,31 @@
 
 %------------------------------------------------------------------------------
 parse_test() ->
-	{WsRqResultH75, WsRqExpectedH75} = parse_request_test_ws_hixie75(),
-	{WsRqResultH76, WsRqExpectedH76} = parse_request_test_ws_hixie76(),
-	{WsRqResultHb7, WsRqExpectedHb7} = parse_request_test_ws_hybi07(),
-	{WsRsResultH75, WsRsExpectedH75} = parse_response_test_ws_hixie75(),
-	{WsRsResultH76, WsRsExpectedH76} = parse_response_test_ws_hixie76(),
-	{WsRsResultHb7, WsRsExpectedHb7} = parse_response_test_ws_hybi7(),
+	{ReqResultH75, ReqExpectH75} = parse_request_hixie75(),
+	{ReqResultH76, ReqExpectH76} = parse_request_hixie76(),
+	{ReqResultHb7, ReqExpectHb7} = parse_request_hybi_07(),
+	{ResResultH75, ResExpectH75} = parse_response_hixie75(),
+	{ResResultH76, ResExpectH76} = parse_response_hixie76(),
+	{ResResultHb7, ResExpectHb7} = parse_response_hybi_07(),
 	[
-		?assertEqual(WsRqResultH75, WsRqExpectedH75),
-		?assertEqual(WsRqResultH76, WsRqExpectedH76),
-		?assertEqual(WsRqResultHb7, WsRqExpectedHb7),
-		?assertEqual(WsRsResultH75, WsRsExpectedH75),
-		?assertEqual(WsRsResultH76, WsRsExpectedH76),
-		?assertEqual(WsRsResultHb7, WsRsExpectedHb7)
+		?assertEqual(ReqResultH75, ReqExpectH75),
+		?assertEqual(ReqResultH76, ReqExpectH76),
+		?assertEqual(ReqResultHb7, ReqExpectHb7),
+		?assertEqual(ResResultH75, ResExpectH75),
+		?assertEqual(ResResultH76, ResExpectH76),
+		?assertEqual(ResResultHb7, ResExpectHb7)
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
-parse_test_1(R, E) ->
+parse_test_1(Sample, E) ->
+	R = websocket_header:parse(Sample),
 	print(R, E),
 	{R, E}.
 %------------------------------------------------------------------------------
 print(Result, Expected) ->
 	io:format("resultado: ~p~nesperado: ~p~n~n", [Result, Expected]).
 %------------------------------------------------------------------------------
-parse_request_test_ws_hixie75() ->
+parse_request_hixie75() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
 		"Upgrade: WebSocket\r\n" ++
@@ -57,9 +58,8 @@ parse_request_test_ws_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []}
 	],
-	Result = websocket_header:parse(RequestSample),
-	parse_test_1(Result, Expected).
-parse_request_test_ws_hixie76() ->
+	parse_test_1(RequestSample, Expected).
+parse_request_hixie76() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
 		"Host: example.com\r\n" ++
@@ -82,9 +82,8 @@ parse_request_test_ws_hixie76() ->
 		{"Origin", "http://example.com"},
 		{undefined, "^:ds[4U"}
 	],
-	Result = websocket_header:parse(RequestSample),
-	parse_test_1(Result, Expected).
-parse_request_test_ws_hybi07() ->
+	parse_test_1(RequestSample, Expected).
+parse_request_hybi_07() ->
 	RequestSample = 
 		"GET /chat HTTP/1.1\r\n" ++
 		"Host: server.example.com\r\n" ++
@@ -106,10 +105,9 @@ parse_request_test_ws_hybi07() ->
 		{"Sec-WebSocket-Version", "7"}, 
 		{undefined, []}
 	],
-	Result = websocket_header:parse(RequestSample),
-	parse_test_1(Result, Expected).
+	parse_test_1(RequestSample, Expected).
 %------------------------------------------------------------------------------
-parse_response_test_ws_hixie75() ->
+parse_response_hixie75() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
 		"Upgrade: WebSocket\r\n" ++
@@ -127,9 +125,8 @@ parse_response_test_ws_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []}
 		],
-	Result = websocket_header:parse(ResponseSample),
-	parse_test_1(Result, Expected).
-parse_response_test_ws_hixie76() ->
+	parse_test_1(ResponseSample, Expected).
+parse_response_hixie76() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
 		"Upgrade: WebSocket\r\n" ++
@@ -148,9 +145,8 @@ parse_response_test_ws_hixie76() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, "8jKS'y:G*Co,Wxa-"}
 		],
-	Result = websocket_header:parse(ResponseSample),
-	parse_test_1(Result, Expected).
-parse_response_test_ws_hybi7() ->
+	parse_test_1(ResponseSample, Expected).
+parse_response_hybi_07() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Switching Protocols\r\n" ++
 		"Upgrade: websocket\r\n" ++
@@ -166,5 +162,4 @@ parse_response_test_ws_hybi7() ->
 		{"Sec-WebSocket-Protocol", "chat"},
 		{undefined, []}
 		],
-	Result = websocket_header:parse(ResponseSample),
-	parse_test_1(Result, Expected).
+	parse_test_1(ResponseSample, Expected).

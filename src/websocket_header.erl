@@ -19,7 +19,7 @@
 % HTTP Header -> [{Key, Value}, ...]
 parse(Header) when is_binary(Header) ->
 	parse(binary_to_list(Header));
-parse(Header) ->
+parse(Header) when is_list(Header) ->
 	[StartLine|FieldLines] = break_lines(Header),
 
 	StartFields  = parse_start_line(StartLine),
