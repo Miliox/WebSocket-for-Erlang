@@ -32,6 +32,10 @@ parse_test() ->
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
+parse_test_1(R, E) ->
+	print(R, E),
+	{R, E}.
+%------------------------------------------------------------------------------
 print(Result, Expected) ->
 	io:format("resultado: ~p~nesperado: ~p~n~n", [Result, Expected]).
 %------------------------------------------------------------------------------
@@ -54,9 +58,7 @@ parse_request_test_ws_hixie75() ->
 		{undefined, []}
 	],
 	Result = websocket_header:parse(RequestSample),
-	print(Result, Expected),
-
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
 parse_request_test_ws_hixie76() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
@@ -81,9 +83,7 @@ parse_request_test_ws_hixie76() ->
 		{undefined, "^:ds[4U"}
 	],
 	Result = websocket_header:parse(RequestSample),
-	print(Result, Expected),
-
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
 parse_request_test_ws_hybi07() ->
 	RequestSample = 
 		"GET /chat HTTP/1.1\r\n" ++
@@ -107,9 +107,7 @@ parse_request_test_ws_hybi07() ->
 		{undefined, []}
 	],
 	Result = websocket_header:parse(RequestSample),
-	print(Result, Expected),
-
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
 %------------------------------------------------------------------------------
 parse_response_test_ws_hixie75() ->
 	ResponseSample = 
@@ -130,8 +128,7 @@ parse_response_test_ws_hixie75() ->
 		{undefined, []}
 		],
 	Result = websocket_header:parse(ResponseSample),
-	print(Result, Expected),
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
 parse_response_test_ws_hixie76() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
@@ -152,8 +149,7 @@ parse_response_test_ws_hixie76() ->
 		{undefined, "8jKS'y:G*Co,Wxa-"}
 		],
 	Result = websocket_header:parse(ResponseSample),
-	print(Result, Expected),
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
 parse_response_test_ws_hybi7() ->
 	ResponseSample = 
 		"HTTP/1.1 101 Switching Protocols\r\n" ++
@@ -171,5 +167,4 @@ parse_response_test_ws_hybi7() ->
 		{undefined, []}
 		],
 	Result = websocket_header:parse(ResponseSample),
-	print(Result, Expected),
-	{Result, Expected}.
+	parse_test_1(Result, Expected).
