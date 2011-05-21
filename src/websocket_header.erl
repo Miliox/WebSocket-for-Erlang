@@ -12,7 +12,7 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 
--export([parse_request/1]).
+-export([parse_request/1, parse_response/1]).
 -include("websocket_header.hrl").
 
 %------------------------------------------------------------------------------
@@ -62,8 +62,10 @@ response_field_list(Line) ->
 	end.
 %------------------------------------------------------------------------------
 map_field(Lines) ->
-	Line2Field = fun(Line) -> line_to_field(Line) end,
-	lists:map(Line2Field, Lines).
+	[Field||
+		L <- Lines,
+		Field <- [line_to_field(L)]
+	].
 %------------------------------------------------------------------------------
 line_to_field(Line) ->
 	case re:run(Line, ?RE_FIELD, ?RE_FIELD_OPT) of
