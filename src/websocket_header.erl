@@ -12,53 +12,40 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 
--export([parse_request/1, parse_response/1]).
+-export([parse/1]).
 -include("websocket_header.hrl").
 
 %------------------------------------------------------------------------------
 % HTTP Header -> [{Key, Value}, ...]
-parse_request(Header) when is_binary(Header) ->
-	parse_request(binary_to_list(Header));
-parse_request(Header) when is_list(Header) ->
-	[RequestLine|FieldLines] = break_lines(Header),
+parse(Header) when is_binary(Header) ->
+	parse(binary_to_list(Header));
+parse(Header) ->
+	[StartLine|FieldLines] = break_lines(Header),
 
-	RequestFields = request_field_list(RequestLine),
-	HeaderFields  = map_field(FieldLines),
-
-	RequestFields ++ HeaderFields;
-parse_request(_) ->
-	erlang:error(badarg).
-%------------------------------------------------------------------------------
-parse_response(Header) when is_binary(Header) ->
-	parse_response(binary_to_list(Header));
-parse_response(Header) when is_list(Header) ->
-	[StatusLine|FieldLines] = break_lines(Header),
-	
-	StatusFields = response_field_list(StatusLine),
+	StartFields  = parse_start_line(StartLine),
 	HeaderFields = map_field(FieldLines),
 
-	StatusFields ++ HeaderFields;
-parse_response(_) ->
+	StartFields ++ HeaderFields;
+parse(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 break_lines(Header) ->
 		re:split(Header, ?RE_LINES, ?RE_LINES_OPT).
 %------------------------------------------------------------------------------
-request_field_list(Line) ->
-	case re:run(Line, ?RE_REQ, ?RE_REQ_OPT) of 
+parse_start_line(L) ->
+	case re:run(L, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
 			[field(method, Method), field(path, Path)];
 		nomatch ->
-			erlang:error("invalid-request-syntax")
+			parse_start_line_1(L)
 	end.
-%------------------------------------------------------------------------------
-response_field_list(Line) ->
-	case re:run(Line, ?RE_RES, ?RE_RES_OPT) of 
+parse_start_line_1(L) ->
+	case re:run(L, ?RE_RES, ?RE_RES_OPT) of 
 		{match, [Status, Reason]} ->
 			[field(status, Status), field(reason, Reason)];
 		nomatch ->
-			erlang:error("invalid-request-syntax")
+			[field(undefined, L)]
 	end.
 %------------------------------------------------------------------------------
 map_field(Lines) ->

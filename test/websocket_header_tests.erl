@@ -15,24 +15,20 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %------------------------------------------------------------------------------
-parse_request_test() ->
-	{WsResultH75, WsExpectedH75} = parse_request_test_ws_hixie75(),
-	{WsResultH76, WsExpectedH76} = parse_request_test_ws_hixie76(),
-	{WsResultHb7, WsExpectedHb7} = parse_request_test_ws_hybi07(),
-
+parse_test() ->
+	{WsRqResultH75, WsRqExpectedH75} = parse_request_test_ws_hixie75(),
+	{WsRqResultH76, WsRqExpectedH76} = parse_request_test_ws_hixie76(),
+	{WsRqResultHb7, WsRqExpectedHb7} = parse_request_test_ws_hybi07(),
+	{WsRsResultH75, WsRsExpectedH75} = parse_response_test_ws_hixie75(),
+	{WsRsResultH76, WsRsExpectedH76} = parse_response_test_ws_hixie76(),
+	{WsRsResultHb7, WsRsExpectedHb7} = parse_response_test_ws_hybi7(),
 	[
-		?assertEqual(WsResultH75, WsExpectedH75),
-		?assertEqual(WsResultH76, WsExpectedH76),
-		?assertEqual(WsResultHb7, WsExpectedHb7)].
-%------------------------------------------------------------------------------
-parse_response_test() ->
-	{WsResultH75, WsExpectedH75} = parse_response_test_ws_hixie75(),
-	{WsResultH76, WsExpectedH76} = parse_response_test_ws_hixie76(),
-	{WsResultHb7, WsExpectedHb7} = parse_response_test_ws_hybi7(),
-	[
-		?assertEqual(WsResultH75, WsExpectedH75),
-		?assertEqual(WsResultH76, WsExpectedH76),
-		?assertEqual(WsResultHb7, WsExpectedHb7)
+		?assertEqual(WsRqResultH75, WsRqExpectedH75),
+		?assertEqual(WsRqResultH76, WsRqExpectedH76),
+		?assertEqual(WsRqResultHb7, WsRqExpectedHb7),
+		?assertEqual(WsRsResultH75, WsRsExpectedH75),
+		?assertEqual(WsRsResultH76, WsRsExpectedH76),
+		?assertEqual(WsRsResultHb7, WsRsExpectedHb7)
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
@@ -57,7 +53,7 @@ parse_request_test_ws_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []}
 	],
-	Result = websocket_header:parse_request(RequestSample),
+	Result = websocket_header:parse(RequestSample),
 	print(Result, Expected),
 
 	{Result, Expected}.
@@ -84,7 +80,7 @@ parse_request_test_ws_hixie76() ->
 		{"Origin", "http://example.com"},
 		{undefined, "^:ds[4U"}
 	],
-	Result = websocket_header:parse_request(RequestSample),
+	Result = websocket_header:parse(RequestSample),
 	print(Result, Expected),
 
 	{Result, Expected}.
@@ -110,7 +106,7 @@ parse_request_test_ws_hybi07() ->
 		{"Sec-WebSocket-Version", "7"}, 
 		{undefined, []}
 	],
-	Result = websocket_header:parse_request(RequestSample),
+	Result = websocket_header:parse(RequestSample),
 	print(Result, Expected),
 
 	{Result, Expected}.
@@ -133,7 +129,7 @@ parse_response_test_ws_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []}
 		],
-	Result = websocket_header:parse_response(ResponseSample),
+	Result = websocket_header:parse(ResponseSample),
 	print(Result, Expected),
 	{Result, Expected}.
 parse_response_test_ws_hixie76() ->
@@ -155,7 +151,7 @@ parse_response_test_ws_hixie76() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, "8jKS'y:G*Co,Wxa-"}
 		],
-	Result = websocket_header:parse_response(ResponseSample),
+	Result = websocket_header:parse(ResponseSample),
 	print(Result, Expected),
 	{Result, Expected}.
 parse_response_test_ws_hybi7() ->
@@ -174,6 +170,6 @@ parse_response_test_ws_hybi7() ->
 		{"Sec-WebSocket-Protocol", "chat"},
 		{undefined, []}
 		],
-	Result = websocket_header:parse_response(ResponseSample),
+	Result = websocket_header:parse(ResponseSample),
 	print(Result, Expected),
 	{Result, Expected}.
