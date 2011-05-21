@@ -29,4 +29,5 @@ test: all_test
 test_verbose: test
 	erl -noshell $(PADIR) \
 	-eval "websocket_header_tests:parse_request_test()" \
+	-eval "websocket_header_tests:parse_response_test()" \
 	-s init stop

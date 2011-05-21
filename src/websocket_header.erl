@@ -20,21 +20,43 @@
 parse_request(Header) when is_binary(Header) ->
 	parse_request(binary_to_list(Header));
 parse_request(Header) when is_list(Header) ->
-	[RequestLine|FieldLines] = 
-		re:split(Header, ?RE_LINES, ?RE_LINES_OPT),
+	[RequestLine|FieldLines] = break_lines(Header),
 
-	RequestField = request_field_list(RequestLine),
-	HeaderFields = map_field(FieldLines),
+	RequestFields = request_field_list(RequestLine),
+	HeaderFields  = map_field(FieldLines),
 
-	RequestField ++ HeaderFields;
+	RequestFields ++ HeaderFields;
 parse_request(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
+parse_response(Header) when is_binary(Header) ->
+	parse_response(binary_to_list(Header));
+parse_response(Header) when is_list(Header) ->
+	[StatusLine|FieldLines] = break_lines(Header),
+	
+	StatusFields = response_field_list(StatusLine),
+	HeaderFields = map_field(FieldLines),
+
+	StatusFields ++ HeaderFields;
+parse_response(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+break_lines(Header) ->
+		re:split(Header, ?RE_LINES, ?RE_LINES_OPT).
 %------------------------------------------------------------------------------
 request_field_list(Line) ->
 	case re:run(Line, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
 			[field(method, Method), field(path, Path)];
+		nomatch ->
+			erlang:error("invalid-request-syntax")
+	end.
+%------------------------------------------------------------------------------
+response_field_list(Line) ->
+	case re:run(Line, ?RE_RES, ?RE_RES_OPT) of 
+		{match, [Status, Reason]} ->
+			[field(status, Status), field(reason, Reason)];
 		nomatch ->
 			erlang:error("invalid-request-syntax")
 	end.

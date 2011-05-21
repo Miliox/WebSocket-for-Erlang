@@ -14,6 +14,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%------------------------------------------------------------------------------
 parse_request_test() ->
 	{WsResultH75, WsExpectedH75} = parse_request_test_ws_hixie75(),
 	{WsResultH76, WsExpectedH76} = parse_request_test_ws_hixie76(),
@@ -23,10 +24,15 @@ parse_request_test() ->
 		?assertEqual(WsResultH75, WsExpectedH75),
 		?assertEqual(WsResultH76, WsExpectedH76),
 		?assertEqual(WsResultHb7, WsExpectedHb7)].
-
+%------------------------------------------------------------------------------
+parse_response_test() ->
+	{WsResultH75, WsExpectedH75} = parse_response_test_ws_hixie75(),
+	[?assertEqual(WsResultH75, WsExpectedH75)].
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 print(Result, Expected) ->
-	io:format("resultado: ~p~nesperado: ~p~n", [Result, Expected]).
-
+	io:format("resultado: ~p~nesperado: ~p~n~n", [Result, Expected]).
+%------------------------------------------------------------------------------
 parse_request_test_ws_hixie75() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
@@ -49,7 +55,6 @@ parse_request_test_ws_hixie75() ->
 	print(Result, Expected),
 
 	{Result, Expected}.
-
 parse_request_test_ws_hixie76() ->
 	RequestSample = 
 		"GET /demo HTTP/1.1\r\n" ++
@@ -77,7 +82,6 @@ parse_request_test_ws_hixie76() ->
 	print(Result, Expected),
 
 	{Result, Expected}.
-
 parse_request_test_ws_hybi07() ->
 	RequestSample = 
 		"GET /chat HTTP/1.1\r\n" ++
@@ -103,4 +107,26 @@ parse_request_test_ws_hybi07() ->
 	Result = websocket_header:parse_request(RequestSample),
 	print(Result, Expected),
 
+	{Result, Expected}.
+%------------------------------------------------------------------------------
+parse_response_test_ws_hixie75() ->
+	ResponseSample = 
+		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+		"Upgrade: WebSocket\r\n" ++
+		"Connection: Upgrade\r\n" ++
+		"WebSocket-Origin: http://example.com\r\n" ++
+		"WebSocket-Location: ws://example.com/demo\r\n" ++
+		"WebSocket-Protocol: sample\r\n\r\n",
+	Expected = [
+		{status, "101"},
+		{reason, "Web Socket Protocol Handshake"},
+		{"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"},
+		{"WebSocket-Origin", "http://example.com"},
+		{"WebSocket-Location", "ws://example.com/demo"},
+		{"WebSocket-Protocol", "sample"},
+		{undefined, []}
+		],
+	Result = websocket_header:parse_response(ResponseSample),
+	print(Result, Expected),
 	{Result, Expected}.
