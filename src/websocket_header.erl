@@ -14,6 +14,7 @@
 
 -export([parse/1]).
 -include("websocket_header.hrl").
+-include("websocket_protocol_header.hrl").
 
 %------------------------------------------------------------------------------
 % HTTP Header -> [{Key, Value}, ...]
@@ -36,14 +37,14 @@ break_lines(Header) ->
 parse_start_line(L) ->
 	case re:run(L, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
-			[field(method, Method), field(path, Path)];
+			[field(?WS_METHOD, Method), field(?WS_URI, Path)];
 		nomatch ->
 			parse_start_line_1(L)
 	end.
 parse_start_line_1(L) ->
 	case re:run(L, ?RE_RES, ?RE_RES_OPT) of 
 		{match, [Status, Reason]} ->
-			[field(status, Status), field(reason, Reason)];
+			[field(?WS_STATUS_CODE, Status), field(?WS_REASON_PHRASE, Reason)];
 		nomatch ->
 			[field(undefined, L)]
 	end.

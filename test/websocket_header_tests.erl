@@ -30,6 +30,7 @@ parse_test() ->
 		?assertEqual(ResResultH76, ResExpectH76),
 		?assertEqual(ResResultHb7, ResExpectHb7),
 		?assertError(badarg, websocket_header:parse(atom)),
+		?assertError(badarg, websocket_header:parse({})),
 		?assertError(badarg, websocket_header:parse(1337))
 	].
 %------------------------------------------------------------------------------
