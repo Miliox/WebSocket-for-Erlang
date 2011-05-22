@@ -45,8 +45,12 @@ parse_test() ->
 %------------------------------------------------------------------------------
 find_test() ->
 	Find = fun(K, L) -> websocket_header:find(K, L) end,
+
 	H75Q = hx75_req_fmt(),
 	H75R = hx75_res_fmt(),
+
+	H76Q = hx76_req_fmt(),
+	H76R = hx76_res_fmt(),
 
 	[
 		?assertEqual({found, "GET"},                Find(?HIXIE75_METHOD, H75Q)     ),
@@ -78,6 +82,38 @@ find_test() ->
 		?assertEqual(notfound, Find(?HIXIE75_HOST,   H75R) ),
 		?assertEqual(notfound, Find(?HIXIE75_ORIGIN_REQ, H75R) )
 
+	] ++
+	[
+		?assertEqual({found, "GET"},                Find(?HIXIE76_METHOD, H76Q)     ),
+		?assertEqual({found, "/demo"},              Find(?HIXIE76_URI,   H76Q)      ),
+		?assertEqual({found, ?HIXIE76_CON_VAL},     Find(?HIXIE76_CONNECTION, H76Q) ),
+		?assertEqual({found, ?HIXIE76_UPG_VAL},     Find(?HIXIE76_UPGRADE, H76Q)    ),
+		?assertEqual({found, "example.com"},        Find(?HIXIE76_HOST,    H76Q)    ),
+		?assertEqual({found, "http://example.com"}, Find(?HIXIE76_ORIGIN_REQ, H76Q) ),
+		?assertEqual({found, "sample"},             Find(?HIXIE76_PROTOCOL,   H76Q) ),
+		?assertEqual({found, "4 @1  46546xW%0l 1 5"},Find(?HIXIE76_KEY1, H76Q)      ),
+		?assertEqual({found, "12998 5 Y3 1  .P00"}, Find(?HIXIE76_KEY2,  H76Q)      ),
+		?assertEqual({found, []},                   Find(undefined, H76Q)           ),
+
+		?assertEqual(notfound, Find(?HIXIE76_STATUS_CODE,   H76Q) ),
+		?assertEqual(notfound, Find(?HIXIE76_REASON_PHRASE, H76Q) ),
+		?assertEqual(notfound, Find(?HIXIE76_ORIGIN_RES,    H76Q) ),
+		?assertEqual(notfound, Find(?HIXIE76_LOCATION, H76Q)      )
+
+	] ++ [
+		?assertEqual({found, "101"},                Find(?HIXIE76_STATUS_CODE,   H76R) ),
+		?assertEqual({found, ?HIXIE76_REASON_VAL},  Find(?HIXIE76_REASON_PHRASE, H76R) ),
+		?assertEqual({found, ?HIXIE76_CON_VAL},     Find(?HIXIE76_CONNECTION,    H76R) ),
+		?assertEqual({found, ?HIXIE76_UPG_VAL},     Find(?HIXIE76_UPGRADE,       H76R) ),
+		?assertEqual({found, "http://example.com"}, Find(?HIXIE76_ORIGIN_RES,    H76R) ),
+		?assertEqual({found, "ws://example.com/demo"}, Find(?HIXIE76_LOCATION,   H76R) ),
+		?assertEqual({found, "sample"},             Find(?HIXIE76_PROTOCOL,      H76R) ),
+		?assertEqual({found, []},                   Find(undefined, H75R) ),
+
+		?assertEqual(notfound, Find(?HIXIE75_METHOD, H76R) ),
+		?assertEqual(notfound, Find(?HIXIE75_URI,    H76R) ),
+		?assertEqual(notfound, Find(?HIXIE75_HOST,   H76R) ),
+		?assertEqual(notfound, Find(?HIXIE75_ORIGIN_REQ, H76R) )
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
@@ -118,12 +154,12 @@ hx76_req() ->
 	"Origin: http://example.com\r\n" ++
 	"\r\n^:ds[4U".
 hx76_res() ->
-	"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+	"HTTP/1.1 101 WebSocket Protocol Handshake\r\n" ++
 	"Upgrade: WebSocket\r\n" ++
 	"Connection: Upgrade\r\n" ++
-	"WebSocket-Origin: http://example.com\r\n" ++
-	"WebSocket-Location: ws://example.com/demo\r\n" ++
-	"WebSocket-Protocol: sample\r\n" ++
+	"Sec-WebSocket-Origin: http://example.com\r\n" ++
+	"Sec-WebSocket-Location: ws://example.com/demo\r\n" ++
+	"Sec-WebSocket-Protocol: sample\r\n" ++
 	"\r\n8jKS'y:G*Co,Wxa-".
 %------------------------------------------------------------------------------
 hb07_req() ->
@@ -186,12 +222,12 @@ hx76_req_fmt() ->
 hx76_res_fmt() ->
 	[
 		{status, "101"},
-		{reason, "Web Socket Protocol Handshake"},
+		{reason, "WebSocket Protocol Handshake"},
 		{"Upgrade", "WebSocket"},
 		{"Connection", "Upgrade"},
-		{"WebSocket-Origin", "http://example.com"},
-		{"WebSocket-Location", "ws://example.com/demo"},
-		{"WebSocket-Protocol", "sample"},
+		{"Sec-WebSocket-Origin", "http://example.com"},
+		{"Sec-WebSocket-Location", "ws://example.com/demo"},
+		{"Sec-WebSocket-Protocol", "sample"},
 		{undefined, []},
 		{undefined, "8jKS'y:G*Co,Wxa-"}
 	].
