@@ -137,14 +137,9 @@ define_response(Reason, _FList) ->
 is_ws_header(FList) ->
 	case [find(?WS_CONNECTION, FList), find(?WS_UPGRADE, FList)] of
 		[{found, ?WS_CON_VAL}, {found, UpgradeValue}] ->
-			is_ws_header_1(UpgradeValue);
+			string:to_lower(U) == string:to_lower(?WS_UPG_VAL);
 		_ ->
 			false
-	end.
-is_ws_header_1(U) ->
-	case string:to_lower(U) == string:to_lower(?WS_UPG_VAL) of
-	       true -> true;
-		_   -> false
 	end.
 %------------------------------------------------------------------------------
 % find(FName, Flist) -> {found, FVAlue}|notfound
