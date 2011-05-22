@@ -13,7 +13,7 @@
 -vsn(2).
 
 -export([parse/1, define/1, find/2]).
--include("websocket_header.hrl").
+-include("websocket_regex_header.hrl").
 -include("websocket_protocol_header.hrl").
 
 %------------------------------------------------------------------------------
