@@ -52,6 +52,9 @@ find_test() ->
 	H76Q = hx76_req_fmt(),
 	H76R = hx76_res_fmt(),
 
+	HB7Q = hb07_req_fmt(),
+	HB7R = hb07_res_fmt(),
+
 	[
 		?assertEqual({found, "GET"},                Find(?HIXIE75_METHOD, H75Q)     ),
 		?assertEqual({found, "/demo"},              Find(?HIXIE75_URI, H75Q)        ),
@@ -114,6 +117,37 @@ find_test() ->
 		?assertEqual(notfound, Find(?HIXIE75_URI,    H76R) ),
 		?assertEqual(notfound, Find(?HIXIE75_HOST,   H76R) ),
 		?assertEqual(notfound, Find(?HIXIE75_ORIGIN_REQ, H76R) )
+	] ++
+	[
+		?assertEqual({found, "GET"},                Find(?HYBI_METHOD, HB7Q)     ),
+		?assertEqual({found, "/chat"},              Find(?HYBI_URI,    HB7Q)     ),
+		?assertEqual({found, ?HYBI_CON_VAL},        Find(?HYBI_CONNECTION, HB7Q) ),
+		?assertEqual({found, ?HYBI_UPG_VAL},        Find(?HYBI_UPGRADE,    HB7Q) ),
+		?assertEqual({found, "server.example.com"}, Find(?HYBI_HOST,       HB7Q) ),
+		?assertEqual({found, "http://example.com"}, Find(?HYBI_ORIGIN,     HB7Q) ),
+		?assertEqual({found, "chat, superchat"},    Find(?HYBI_PROTOCOL,   HB7Q) ),
+		?assertEqual({found, "dGhlIHNbXBsZSBub25jZQ=="}, Find(?HYBI_KEY,   HB7Q) ),
+		?assertEqual({found, "7"}, Find(?HYBI_VERSION, HB7Q) ),
+		?assertEqual({found, []},  Find(undefined,     HB7Q) ),
+
+		?assertEqual(notfound, Find(?HYBI_STATUS_CODE,   HB7Q) ),
+		?assertEqual(notfound, Find(?HYBI_REASON_PHRASE, HB7Q) ),
+		?assertEqual(notfound, Find(?HYBI_ACCEPT,    HB7Q) )
+	] ++ [
+		?assertEqual({found, "101"},             Find(?HYBI_STATUS_CODE,   HB7R) ),
+		?assertEqual({found, ?HYBI_REASON_VAL},  Find(?HYBI_REASON_PHRASE, HB7R) ),
+		?assertEqual({found, ?HYBI_CON_VAL},     Find(?HYBI_CONNECTION,    HB7R) ),
+		?assertEqual({found, ?HYBI_UPG_VAL},     Find(?HYBI_UPGRADE,       HB7R) ),
+		?assertEqual({found, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="}, Find(?HYBI_ACCEPT, HB7R) ),
+		?assertEqual({found, "chat"},            Find(?HYBI_PROTOCOL, HB7R) ),
+		?assertEqual({found, []},                Find(undefined,      HB7R) ),
+
+		?assertEqual(notfound, Find(?HYBI_METHOD, HB7R) ),
+		?assertEqual(notfound, Find(?HYBI_URI,    HB7R) ),
+		?assertEqual(notfound, Find(?HYBI_HOST,   HB7R) ),
+		?assertEqual(notfound, Find(?HYBI_ORIGIN, HB7R) ),
+		?assertEqual(notfound, Find(?HYBI_KEY,    HB7R) ),
+		?assertEqual(notfound, Find(?HYBI_VERSION,HB7R) )
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------

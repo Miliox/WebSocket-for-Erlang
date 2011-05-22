@@ -91,10 +91,9 @@
 % Header Request Field
 -define(HYBI_ORIGIN,  ?WS_SEC_PREFIX ++ ?WS_ORIGIN).
 -define(HYBI_VERSION, ?WS_SEC_PREFIX ++ "Version").
+-define(HYBI_KEY,     ?WS_SEC_PREFIX ++ "Key").
 % Header Response Field
 -define(HYBI_ACCEPT,  ?WS_SEC_PREFIX ++ "Accept").
--define(HYBI_KEY,     ?WS_SEC_PREFIX ++ "Key").
--define(HYBI_LOCATION,?WS_SEC_PREFIX ++ ?WS_LOCATION).
 % Pseudo Field
 -define(HYBI_URI,    ?HIXIE76_URI).
 -define(HYBI_METHOD, ?HIXIE76_METHOD).
