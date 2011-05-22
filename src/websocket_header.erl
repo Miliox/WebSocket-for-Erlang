@@ -30,90 +30,6 @@ parse(Header) when is_list(Header) ->
 parse(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
-%------------------------------------------------------------------------------
-% FieldList -> {WebSocketDraft, request|response}|{error, Reason}
-define(FieldList) when is_list(FieldList) ->
-	case is_ws_header(FieldList)  of
-		true ->
-			define_1(FieldList);
-		false ->
-			{error, invalid_header}
-	end;
-define(_) ->
-	erlang:error(badarg).
-%------------------------------------------------------------------------------
-define_1(FieldList) ->
-	case find(?WS_REASON_PHRASE, FieldList) of
-		{found, Reason} ->
-			define_response(Reason, FieldList);
-		notfound ->
-			define_2(FieldList)
-	end.
-%------------------------------------------------------------------------------
-is_ws_header(FieldList) ->
-	case [find(?WS_CONNECTION, FieldList), find(?WS_UPGRADE, FieldList)] of
-		[{found, ?WS_CON_VAL}, {found, UpgVal}] ->
-			case string:to_lower(UpgVal) == string:to_lower(?WS_UPG_VAL) of
-			       true -> true;
-				_   -> false
-			end;
-		_ ->
-			false
-	end.
-%------------------------------------------------------------------------------
-define_2(FieldList) ->
-	case find(?WS_METHOD, FieldList) of
-		{found, "GET"} ->
-			define_request(FieldList);
-		{notfound, notfound} ->
-			{error, invalid_header}
-	end.
-%------------------------------------------------------------------------------
-define_response(Reason, _FieldList) ->
-	case Reason of
-		?HIXIE75_REASON_VAL ->
-			% validate_hixie75_response();
-			{?HIXIE75, response};
-		?HIXIE76_REASON_VAL ->
-			% validate_hixie76_response();
-			{?HIXIE76, response};
-		?HYBI_REASON_VAL ->
-			% validate_hybi_response();
-			{?HYBI, response};
-		_ ->
-			{error, invalid_response}
-	end.
-%------------------------------------------------------------------------------
-define_request(FieldList) ->
-	case find(?WS_ORIGIN, FieldList) of
-		{found, _} ->
-			define_request_hixie(FieldList);
-		notfound ->
-			define_request_hybi(FieldList)
-	end.
-%------------------------------------------------------------------------------
-define_request_hixie(FieldList) ->
-	case [find(?HIXIE76_KEY1, FieldList),find(?HIXIE76_KEY2, FieldList)] of
-		[notfound, notfound] ->
-			{?HIXIE75, request};
-		[{found, _}, {found, _}] ->
-			{?HIXIE76, request};
-		_ ->
-			{error, invalid_request_hixie}
-	end.
-%------------------------------------------------------------------------------
-define_request_hybi(FieldList) ->
-	case [ 
-		find(?HYBI_KEY,     FieldList),
-		find(?HYBI_ORIGIN,  FieldList),
-		find(?HYBI_VERSION, FieldList) 
-	] of
-		[{found, _}, {found, _}, {found, _}] ->
-			{?HYBI, request};
-		_ ->
-			{error, invalid_request_hybi}
-	end.
-%------------------------------------------------------------------------------
 break_lines(Header) ->
 	re:split(Header, ?RE_LINES, ?RE_LINES_OPT).
 %------------------------------------------------------------------------------
@@ -124,6 +40,7 @@ parse_start_line(L) ->
 		nomatch ->
 			parse_start_line_1(L)
 	end.
+%------------------------------------------------------------------------------
 parse_start_line_1(L) ->
 	case re:run(L, ?RE_RES, ?RE_RES_OPT) of 
 		{match, [Status, Reason]} ->
@@ -148,6 +65,89 @@ line_to_field(Line) ->
 %------------------------------------------------------------------------------
 field(K, V) -> {K, V}.
 %------------------------------------------------------------------------------
+% FList -> {WebSocketDraft, request|response}|{error, Reason}
+define(FList) when is_list(FList) ->
+	case is_ws_header(FList)  of
+		true ->
+			define_1(FList);
+		false ->
+			{error, invalid_header}
+	end;
+define(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+define_1(FList) ->
+	case find(?WS_REASON_PHRASE, FList) of
+		{found, Reason} ->
+			define_response(Reason, FList);
+		notfound ->
+			define_2(FList)
+	end.
+%------------------------------------------------------------------------------
+define_2(FList) ->
+	case find(?WS_METHOD, FList) of
+		{found, ?WS_MET_VAL} ->
+			define_request(FList);
+		{notfound, notfound} ->
+			{error, invalid_header}
+	end.
+%------------------------------------------------------------------------------
+define_request(FList) ->
+	case find(?WS_ORIGIN, FList) of
+		{found, _} ->
+			define_request_hixie(FList);
+		notfound ->
+			define_request_hybi(FList)
+	end.
+%------------------------------------------------------------------------------
+define_request_hixie(FList) ->
+	case [find(?HIXIE76_KEY1, FList),find(?HIXIE76_KEY2, FList)] of
+		[notfound, notfound] ->
+			{?HIXIE75, request};
+		[{found, _}, {found, _}] ->
+			{?HIXIE76, request};
+		_ ->
+			{error, invalid_request_hixie}
+	end.
+%------------------------------------------------------------------------------
+define_request_hybi(FList) ->
+	case [ 
+		find(?HYBI_KEY,     FList),
+		find(?HYBI_ORIGIN,  FList),
+		find(?HYBI_VERSION, FList) 
+	] of
+		[{found, _}, {found, _}, {found, _}] ->
+			{?HYBI, request};
+		_ ->
+			{error, invalid_request_hybi}
+	end.
+%------------------------------------------------------------------------------
+define_response(Reason, _FList) ->
+	case Reason of
+		?HIXIE75_REASON_VAL ->
+			{?HIXIE75, response};
+		?HIXIE76_REASON_VAL ->
+			{?HIXIE76, response};
+		?HYBI_REASON_VAL ->
+			{?HYBI, response};
+		_ ->
+			{error, invalid_response}
+	end.
+%------------------------------------------------------------------------------
+is_ws_header(FList) ->
+	case [find(?WS_CONNECTION, FList), find(?WS_UPGRADE, FList)] of
+		[{found, ?WS_CON_VAL}, {found, UpgradeValue}] ->
+			is_ws_header_1(UpgradeValue);
+		_ ->
+			false
+	end.
+is_ws_header_1(U) ->
+	case string:to_lower(U) == string:to_lower(?WS_UPG_VAL) of
+	       true -> true;
+		_   -> false
+	end.
+%------------------------------------------------------------------------------
+% find(FName, Flist) -> {found, FVAlue}|notfound
 find(FName, FList) ->
 	FNameIndex = 1,
 	case lists:keyfind(FName, FNameIndex, FList) of
