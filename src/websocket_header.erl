@@ -12,7 +12,7 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 
--export([parse/1]).
+-export([parse/1, define/1, find/2]).
 -include("websocket_header.hrl").
 -include("websocket_protocol_header.hrl").
 
@@ -28,6 +28,11 @@ parse(Header) when is_list(Header) ->
 
 	StartFields ++ HeaderFields;
 parse(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+define(FieldList) when is_list(FieldList) ->
+	erlang:error();
+define(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
@@ -64,3 +69,13 @@ line_to_field(Line) ->
 	end.
 %------------------------------------------------------------------------------
 field(K, V) -> {K, V}.
+%------------------------------------------------------------------------------
+find(FName, FList) ->
+	FNameIndex = 1,
+	case lists:keyfind(FName, FNameIndex, FList) of
+		{FName, Value} ->
+			{found, Value};
+		false -> 
+			notfound
+	end.
+%------------------------------------------------------------------------------

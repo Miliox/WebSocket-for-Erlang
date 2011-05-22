@@ -1,6 +1,6 @@
 % Author: Emiliano Carlos de Moraes Firmino
 {"./*",
 [debug_info,
-{outdir,"../ebin"},{i, "../include"},
+{outdir,"../ebin"},{i, "../src"},
 warning_as_errors, report, verbose, export_all]}.
 

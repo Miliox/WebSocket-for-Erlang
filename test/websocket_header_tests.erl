@@ -13,15 +13,23 @@
 -vsn(1).
 
 -include_lib("eunit/include/eunit.hrl").
+-include("websocket_protocol_header.hrl").
 
 %------------------------------------------------------------------------------
 parse_test() ->
-	{ReqResultH75, ReqExpectH75} = parse_request_hixie75(),
-	{ReqResultH76, ReqExpectH76} = parse_request_hixie76(),
-	{ReqResultHb7, ReqExpectHb7} = parse_request_hybi_07(),
-	{ResResultH75, ResExpectH75} = parse_response_hixie75(),
-	{ResResultH76, ResExpectH76} = parse_response_hixie76(),
-	{ResResultHb7, ResExpectHb7} = parse_response_hybi_07(),
+	{ReqResultH75, ReqExpectH75} = parse_test_1(
+		hx75_req(), hx75_req_fmt()),
+	{ReqResultH76, ReqExpectH76} = parse_test_1(
+		hx76_req(), hx76_req_fmt()),
+	{ReqResultHb7, ReqExpectHb7} = parse_test_1(
+		hb07_req(), hb07_req_fmt()),
+	{ResResultH75, ResExpectH75} = parse_test_1(
+		hx75_res(), hx75_res_fmt()),
+	{ResResultH76, ResExpectH76} = parse_test_1(
+		hx76_res(), hx76_res_fmt()),
+	{ResResultHb7, ResExpectHb7} = parse_test_1(
+		hb07_res(), hb07_res_fmt()),
+
 	[
 		?assertEqual(ReqResultH75, ReqExpectH75),
 		?assertEqual(ReqResultH76, ReqExpectH76),
@@ -29,9 +37,47 @@ parse_test() ->
 		?assertEqual(ResResultH75, ResExpectH75),
 		?assertEqual(ResResultH76, ResExpectH76),
 		?assertEqual(ResResultHb7, ResExpectHb7),
+
 		?assertError(badarg, websocket_header:parse(atom)),
 		?assertError(badarg, websocket_header:parse({})),
 		?assertError(badarg, websocket_header:parse(1337))
+	].
+%------------------------------------------------------------------------------
+find_test() ->
+	Find = fun(K, L) -> websocket_header:find(K, L) end,
+	H75Q = hx75_req_fmt(),
+	H75R = hx75_res_fmt(),
+
+	[
+		?assertEqual({found, "GET"},                Find(?HIXIE75_METHOD, H75Q)     ),
+		?assertEqual({found, "/demo"},              Find(?HIXIE75_URI, H75Q)        ),
+		?assertEqual({found, ?HIXIE75_CON_VAL},     Find(?HIXIE75_CONNECTION, H75Q) ),
+		?assertEqual({found, ?HIXIE75_UPG_VAL},     Find(?HIXIE75_UPGRADE, H75Q)    ),
+		?assertEqual({found, "example.com"},        Find(?HIXIE75_HOST, H75Q)       ),
+		?assertEqual({found, "http://example.com"}, Find(?HIXIE75_ORIGIN_REQ, H75Q) ),
+		?assertEqual({found, "sample"},             Find(?HIXIE75_PROTOCOL, H75Q)   ),
+		?assertEqual({found, []},                   Find(undefined, H75Q)           ),
+
+		?assertEqual(notfound, Find(?HIXIE75_STATUS_CODE, H75Q)   ),
+		?assertEqual(notfound, Find(?HIXIE75_REASON_PHRASE, H75Q) ),
+		?assertEqual(notfound, Find(?HIXIE75_ORIGIN_RES, H75Q)    ),
+		?assertEqual(notfound, Find(?HIXIE75_LOCATION, H75Q)      )
+
+	] ++ [
+		?assertEqual({found, "101"},                Find(?HIXIE75_STATUS_CODE, H75R)   ),
+		?assertEqual({found, ?HIXIE75_REASON_VAL},  Find(?HIXIE75_REASON_PHRASE, H75R) ),
+		?assertEqual({found, ?HIXIE75_CON_VAL},     Find(?HIXIE75_CONNECTION, H75R) ),
+		?assertEqual({found, ?HIXIE75_UPG_VAL},     Find(?HIXIE75_UPGRADE, H75R)    ),
+		?assertEqual({found, "http://example.com"}, Find(?HIXIE75_ORIGIN_RES, H75R) ),
+		?assertEqual({found, "ws://example.com/demo"}, Find(?HIXIE75_LOCATION, H75R)),
+		?assertEqual({found, "sample"},             Find(?HIXIE75_PROTOCOL, H75R)   ),
+		?assertEqual({found, []},                   Find(undefined, H75R)           ),
+
+		?assertEqual(notfound, Find(?HIXIE75_METHOD, H75R) ),
+		?assertEqual(notfound, Find(?HIXIE75_URI,    H75R) ),
+		?assertEqual(notfound, Find(?HIXIE75_HOST,   H75R) ),
+		?assertEqual(notfound, Find(?HIXIE75_ORIGIN_REQ, H75R) )
+
 	].
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
@@ -43,16 +89,63 @@ parse_test_1(Sample, E) ->
 print(Result, Expected) ->
 	io:format("resultado: ~p~nesperado: ~p~n~n", [Result, Expected]).
 %------------------------------------------------------------------------------
-parse_request_hixie75() ->
-	RequestSample = 
-		"GET /demo HTTP/1.1\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"Host: example.com\r\n" ++
-		"Origin: http://example.com\r\n" ++
-		"WebSocket-Protocol: sample\r\n" ++
-		"\r\n",
-	Expected = [
+hx75_req() ->
+	"GET /demo HTTP/1.1\r\n" ++
+	"Upgrade: WebSocket\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"Host: example.com\r\n" ++
+	"Origin: http://example.com\r\n" ++
+	"WebSocket-Protocol: sample\r\n" ++
+	"\r\n".
+hx75_res() ->
+	"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+	"Upgrade: WebSocket\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"WebSocket-Origin: http://example.com\r\n" ++
+	"WebSocket-Location: ws://example.com/demo\r\n" ++
+	"WebSocket-Protocol: sample\r\n" ++
+	"\r\n".
+%------------------------------------------------------------------------------
+
+hx76_req() ->
+	"GET /demo HTTP/1.1\r\n" ++
+	"Host: example.com\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"Sec-WebSocket-Key2: 12998 5 Y3 1  .P00\r\n" ++
+	"Sec-WebSocket-Protocol: sample\r\n" ++
+	"Upgrade: WebSocket\r\n" ++
+	"Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5\r\n" ++
+	"Origin: http://example.com\r\n" ++
+	"\r\n^:ds[4U".
+hx76_res() ->
+	"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
+	"Upgrade: WebSocket\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"WebSocket-Origin: http://example.com\r\n" ++
+	"WebSocket-Location: ws://example.com/demo\r\n" ++
+	"WebSocket-Protocol: sample\r\n" ++
+	"\r\n8jKS'y:G*Co,Wxa-".
+%------------------------------------------------------------------------------
+hb07_req() ->
+	"GET /chat HTTP/1.1\r\n" ++
+	"Host: server.example.com\r\n" ++
+	"Upgrade: websocket\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"Sec-WebSocket-Key: dGhlIHNbXBsZSBub25jZQ==\r\n" ++
+	"Sec-WebSocket-Origin: http://example.com\r\n" ++
+	"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
+	"Sec-WebSocket-Version: 7\r\n" ++ 
+	"\r\n".
+hb07_res() ->
+	"HTTP/1.1 101 Switching Protocols\r\n" ++
+	"Upgrade: websocket\r\n" ++
+	"Connection: Upgrade\r\n" ++
+	"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n" ++
+	"Sec-WebSocket-Protocol: chat\r\n" ++ 
+	"\r\n".
+%------------------------------------------------------------------------------
+hx75_req_fmt() ->
+	[
 		{method, "GET"}, 
 		{path, "/demo"}, 
 		{"Upgrade", "WebSocket"},
@@ -62,18 +155,9 @@ parse_request_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []},
 		{undefined, []}
-	],
-	parse_test_1(RequestSample, Expected).
-parse_response_hixie75() ->
-	ResponseSample = 
-		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"WebSocket-Origin: http://example.com\r\n" ++
-		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n" ++
-		"\r\n",
-	Expected = [
+	].
+hx75_res_fmt() ->
+	[
 		{status, "101"},
 		{reason, "Web Socket Protocol Handshake"},
 		{"Upgrade", "WebSocket"},
@@ -83,21 +167,10 @@ parse_response_hixie75() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []},
 		{undefined, []}
-		],
-	parse_test_1(ResponseSample, Expected).
+	].
 %------------------------------------------------------------------------------
-parse_request_hixie76() ->
-	RequestSample = 
-		"GET /demo HTTP/1.1\r\n" ++
-		"Host: example.com\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"Sec-WebSocket-Key2: 12998 5 Y3 1  .P00\r\n" ++
-		"Sec-WebSocket-Protocol: sample\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5\r\n" ++
-		"Origin: http://example.com\r\n" ++
-		"\r\n^:ds[4U",
-	Expected = [
+hx76_req_fmt() ->
+	[
 		{method, "GET"}, 
 		{path, "/demo"}, 
 		{"Host", "example.com"},
@@ -109,18 +182,9 @@ parse_request_hixie76() ->
 		{"Origin", "http://example.com"},
 		{undefined, []},
 		{undefined, "^:ds[4U"}
-	],
-	parse_test_1(RequestSample, Expected).
-parse_response_hixie76() ->
-	ResponseSample = 
-		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n" ++
-		"Upgrade: WebSocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"WebSocket-Origin: http://example.com\r\n" ++
-		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n" ++
-		"\r\n8jKS'y:G*Co,Wxa-",
-	Expected = [
+	].
+hx76_res_fmt() ->
+	[
 		{status, "101"},
 		{reason, "Web Socket Protocol Handshake"},
 		{"Upgrade", "WebSocket"},
@@ -130,21 +194,10 @@ parse_response_hixie76() ->
 		{"WebSocket-Protocol", "sample"},
 		{undefined, []},
 		{undefined, "8jKS'y:G*Co,Wxa-"}
-		],
-	parse_test_1(ResponseSample, Expected).
+	].
 %------------------------------------------------------------------------------
-parse_request_hybi_07() ->
-	RequestSample = 
-		"GET /chat HTTP/1.1\r\n" ++
-		"Host: server.example.com\r\n" ++
-		"Upgrade: websocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"Sec-WebSocket-Key: dGhlIHNbXBsZSBub25jZQ==\r\n" ++
-		"Sec-WebSocket-Origin: http://example.com\r\n" ++
-		"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
-		"Sec-WebSocket-Version: 7\r\n" ++ 
-		"\r\n",
-	Expected = [
+hb07_req_fmt() ->
+	[
 		{method, "GET"}, 
 		{path, "/chat"}, 
 		{"Host", "server.example.com"},
@@ -156,17 +209,9 @@ parse_request_hybi_07() ->
 		{"Sec-WebSocket-Version", "7"}, 
 		{undefined, []},
 		{undefined, []}
-	],
-	parse_test_1(RequestSample, Expected).
-parse_response_hybi_07() ->
-	ResponseSample = 
-		"HTTP/1.1 101 Switching Protocols\r\n" ++
-		"Upgrade: websocket\r\n" ++
-		"Connection: Upgrade\r\n" ++
-		"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n" ++
-		"Sec-WebSocket-Protocol: chat\r\n" ++ 
-		"\r\n",
-	Expected = [
+	].
+hb07_res_fmt() ->
+	[
 		{status, "101"},
 		{reason, "Switching Protocols"},
 		{"Upgrade", "websocket"},
@@ -175,5 +220,4 @@ parse_response_hybi_07() ->
 		{"Sec-WebSocket-Protocol", "chat"},
 		{undefined, []},
 		{undefined, []}
-		],
-	parse_test_1(ResponseSample, Expected).
+	].

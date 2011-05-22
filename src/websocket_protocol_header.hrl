@@ -6,18 +6,22 @@
 %% Criado: 05/21/11 22:56:32 (HPC)
 
 %------------------------------------------------------------------------------
-%% Http Like HandShake
+-define(HIXIE75, draft_hixie_75).
+-define(HIXIE76, draft_hixie_76).
+-define(HYBI,    draft_hybi_07).
+%------------------------------------------------------------------------------
 -define(WS_PREFIX,     "WebSocket-").
 -define(WS_SEC_PREFIX, "Sec-" ++ ?WS_PREFIX).
+%% Http Like HandShake
 % Start Line
 -define(WS_HOST,       "Host").
 -define(WS_MET_VAL,    "GET").
--define(WS_REASON_VAL, "WebSocket Protocol Handshake").
+-define(WS_REASON_VAL, " Protocol Handshake").
 % Header Field
 -define(WS_UPGRADE,    "Upgrade").
 -define(WS_UPG_VAL,    "WebSocket").
 -define(WS_CONNECTION, "Connection").
--define(WS_CON_VAL,    ?UPGRADE).
+-define(WS_CON_VAL,    ?WS_UPGRADE).
 -define(WS_ORIGIN,     "Origin").
 -define(WS_LOCATION,   "Location").
 -define(WS_PROTOCOL,   "Protocol").
@@ -31,7 +35,7 @@
 % Start Line
 -define(HIXIE75_MET_VAL,    ?WS_MET_VAL).
 -define(HIXIE75_HOST,       ?WS_HOST).
--define(HIXIE75_REASON_VAL, ?WS_REASON).
+-define(HIXIE75_REASON_VAL, "Web Socket" ++ ?WS_REASON_VAL).
 % Header * Field
 -define(HIXIE75_UPGRADE,    ?WS_UPGRADE).
 -define(HIXIE75_UPG_VAL,    ?WS_UPG_VAL).
@@ -53,7 +57,7 @@
 % Start Line
 -define(HIXIE76_MET_VAL,    ?HIXIE75_MET_VAL).
 -define(HIXIE76_HOST,       ?HIXIE75_HOST).
--define(HIXIE76_REASON_VAL, ?HIXIE75_REASON).
+-define(HIXIE76_REASON_VAL, "WebSocket" ++ ?WS_REASON_VAL).
 % Header * Field
 -define(HIXIE76_UPGRADE,    ?HIXIE75_UPGRADE).
 -define(HIXIE76_UPG_VAL,    ?HIXIE75_UPG_VAL).
