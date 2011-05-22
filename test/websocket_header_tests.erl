@@ -49,7 +49,8 @@ parse_request_hixie75() ->
 		"Connection: Upgrade\r\n" ++
 		"Host: example.com\r\n" ++
 		"Origin: http://example.com\r\n" ++
-		"WebSocket-Protocol: sample\r\n\r\n",
+		"WebSocket-Protocol: sample\r\n" ++
+		"\r\n",
 	Expected = [
 		{method, "GET"}, 
 		{path, "/demo"}, 
@@ -58,6 +59,7 @@ parse_request_hixie75() ->
 		{"Host", "example.com"},
 		{"Origin", "http://example.com"}, 
 		{"WebSocket-Protocol", "sample"},
+		{undefined, []},
 		{undefined, []}
 	],
 	parse_test_1(RequestSample, Expected).
@@ -68,7 +70,8 @@ parse_response_hixie75() ->
 		"Connection: Upgrade\r\n" ++
 		"WebSocket-Origin: http://example.com\r\n" ++
 		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n\r\n",
+		"WebSocket-Protocol: sample\r\n" ++
+		"\r\n",
 	Expected = [
 		{status, "101"},
 		{reason, "Web Socket Protocol Handshake"},
@@ -77,6 +80,7 @@ parse_response_hixie75() ->
 		{"WebSocket-Origin", "http://example.com"},
 		{"WebSocket-Location", "ws://example.com/demo"},
 		{"WebSocket-Protocol", "sample"},
+		{undefined, []},
 		{undefined, []}
 		],
 	parse_test_1(ResponseSample, Expected).
@@ -102,6 +106,7 @@ parse_request_hixie76() ->
 		{"Upgrade", "WebSocket"},
 		{"Sec-WebSocket-Key1", "4 @1  46546xW%0l 1 5"},
 		{"Origin", "http://example.com"},
+		{undefined, []},
 		{undefined, "^:ds[4U"}
 	],
 	parse_test_1(RequestSample, Expected).
@@ -112,8 +117,8 @@ parse_response_hixie76() ->
 		"Connection: Upgrade\r\n" ++
 		"WebSocket-Origin: http://example.com\r\n" ++
 		"WebSocket-Location: ws://example.com/demo\r\n" ++
-		"WebSocket-Protocol: sample\r\n\r\n" ++
-		"8jKS'y:G*Co,Wxa-",
+		"WebSocket-Protocol: sample\r\n" ++
+		"\r\n8jKS'y:G*Co,Wxa-",
 	Expected = [
 		{status, "101"},
 		{reason, "Web Socket Protocol Handshake"},
@@ -122,6 +127,7 @@ parse_response_hixie76() ->
 		{"WebSocket-Origin", "http://example.com"},
 		{"WebSocket-Location", "ws://example.com/demo"},
 		{"WebSocket-Protocol", "sample"},
+		{undefined, []},
 		{undefined, "8jKS'y:G*Co,Wxa-"}
 		],
 	parse_test_1(ResponseSample, Expected).
@@ -135,7 +141,8 @@ parse_request_hybi_07() ->
 		"Sec-WebSocket-Key: dGhlIHNbXBsZSBub25jZQ==\r\n" ++
 		"Sec-WebSocket-Origin: http://example.com\r\n" ++
 		"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
-		"Sec-WebSocket-Version: 7\r\n\r\n",
+		"Sec-WebSocket-Version: 7\r\n" ++ 
+		"\r\n",
 	Expected = [
 		{method, "GET"}, 
 		{path, "/chat"}, 
@@ -146,6 +153,7 @@ parse_request_hybi_07() ->
 		{"Sec-WebSocket-Origin", "http://example.com"},
 		{"Sec-WebSocket-Protocol", "chat, superchat"},
 		{"Sec-WebSocket-Version", "7"}, 
+		{undefined, []},
 		{undefined, []}
 	],
 	parse_test_1(RequestSample, Expected).
@@ -155,7 +163,8 @@ parse_response_hybi_07() ->
 		"Upgrade: websocket\r\n" ++
 		"Connection: Upgrade\r\n" ++
 		"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n" ++
-		"Sec-WebSocket-Protocol: chat\r\n\r\n",
+		"Sec-WebSocket-Protocol: chat\r\n" ++ 
+		"\r\n",
 	Expected = [
 		{status, "101"},
 		{reason, "Switching Protocols"},
@@ -163,6 +172,7 @@ parse_response_hybi_07() ->
 		{"Connection", "Upgrade"},
 		{"Sec-WebSocket-Accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="},
 		{"Sec-WebSocket-Protocol", "chat"},
+		{undefined, []},
 		{undefined, []}
 		],
 	parse_test_1(ResponseSample, Expected).

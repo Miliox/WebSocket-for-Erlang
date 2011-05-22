@@ -24,7 +24,7 @@
 -define(RE_FIELD, "^("++ ?RE_FIELD_NAME  ++"): ("++ ?RE_FIELD_VALUE ++")$").
 
 % Header Line
--define(RE_LINES, "[\r\n]+").
+-define(RE_LINES, "\r\n").
 -define(RE_LINES_OPT, [{return, list}]).
 -define(RE_FIELD_OPT, [{capture, all_but_first, list}]).
 %------------------------------------------------------------------------------
