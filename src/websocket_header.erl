@@ -16,6 +16,7 @@
 -include("websocket_protocol_header.hrl").
 -include("websocket_regex_header.hrl").
 
+-define(DEFINED_HEADER(Draft, Type), {ok, {Draft, Type}}).
 -define(ERROR_HEADER, {error, invalid_header}).
 
 %------------------------------------------------------------------------------
@@ -105,9 +106,9 @@ define_request(FList) ->
 define_request_hixie(FList) ->
 	case [find(?HIXIE76_KEY1, FList),find(?HIXIE76_KEY2, FList)] of
 		[notfound, notfound] ->
-			{?HIXIE75, request};
+			?DEFINED_HEADER(?HIXIE75, request);
 		[{found, _}, {found, _}] ->
-			{?HIXIE76, request};
+			?DEFINED_HEADER(?HIXIE76, request);
 		_ ->
 			?ERROR_HEADER
 	end.
@@ -119,7 +120,7 @@ define_request_hybi(FList) ->
 		find(?HYBI_VERSION, FList) 
 	] of
 		[{found, _}, {found, _}, {found, _}] ->
-			{?HYBI, request};
+			?DEFINED_HEADER(?HYBI, request);
 		_ ->
 			?ERROR_HEADER
 	end.
@@ -142,7 +143,7 @@ define_response_hixie75(FList) ->
 		find(?HIXIE75_LOCATION, FList)
 	] of
 		[{found, _}, {found, _}] ->
-			{?HIXIE75, response};
+			?DEFINED_HEADER(?HIXIE75, response);
 		_ ->
 			?ERROR_HEADER
 	end.
@@ -153,7 +154,7 @@ define_response_hixie76(FList) ->
 		find(?HIXIE76_LOCATION, FList)
 	] of
 		[{found, _}, {found, _}] ->
-			{?HIXIE76, response};
+			?DEFINED_HEADER(?HIXIE76, response);
 		_ ->
 			?ERROR_HEADER
 	end.
@@ -161,7 +162,7 @@ define_response_hixie76(FList) ->
 define_response_hybi(FList) ->
 	case find(?HYBI_ACCEPT, FList) of
 		{found, _} ->
-			{?HYBI, response};
+			?DEFINED_HEADER(?HYBI, response);
 		_ ->
 			?ERROR_HEADER
 	end.
