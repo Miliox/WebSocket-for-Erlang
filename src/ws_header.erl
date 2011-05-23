@@ -8,13 +8,13 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(websocket_header).
+-module(ws_header).
 -author("elmiliox@gmail.com").
 -vsn(2).
 
 -export([parse/1, type/1, find/2]).
--include("websocket_protocol_header.hrl").
--include("websocket_regex_header.hrl").
+-include("ws_protocol_header.hrl").
+-include("ws_re_header.hrl").
 
 -define(DEFINED_HEADER(Draft, Type), {ok, {Draft, Type}}).
 -define(ERROR_HEADER, {error, invalid_header}).

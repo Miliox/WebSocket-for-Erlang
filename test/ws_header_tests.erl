@@ -8,12 +8,12 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(websocket_header_tests).
+-module(ws_header_tests).
 -author("elmiliox@gmail.com").
 -vsn(1).
 
 -include_lib("eunit/include/eunit.hrl").
--include("websocket_protocol_header.hrl").
+-include("ws_protocol_header.hrl").
 
 %------------------------------------------------------------------------------
 parse_test() ->
@@ -38,13 +38,13 @@ parse_test() ->
 		?assertEqual(ResResultH76, ResExpectH76),
 		?assertEqual(ResResultHb7, ResExpectHb7),
 
-		?assertError(badarg, websocket_header:parse(atom)),
-		?assertError(badarg, websocket_header:parse({})),
-		?assertError(badarg, websocket_header:parse(1337))
+		?assertError(badarg, ws_header:parse(atom)),
+		?assertError(badarg, ws_header:parse({})),
+		?assertError(badarg, ws_header:parse(1337))
 	].
 %------------------------------------------------------------------------------
 find_test() ->
-	Find = fun(K, L) -> websocket_header:find(K, L) end,
+	Find = fun(K, L) -> ws_header:find(K, L) end,
 
 	H75Q = hx75_req_fmt(),
 	H75R = hx75_res_fmt(),
@@ -153,21 +153,21 @@ find_test() ->
 type_test() ->
 	[
 		?assertEqual({ok, {?HIXIE75, response}}, 
-			websocket_header:type(hx75_res_fmt())),
+			ws_header:type(hx75_res_fmt())),
 		?assertEqual({ok, {?HIXIE76, response}}, 
-			websocket_header:type(hx76_res_fmt())),
+			ws_header:type(hx76_res_fmt())),
 		?assertEqual({ok, {?HYBI, response}}, 
-			websocket_header:type(hb07_res_fmt())),
+			ws_header:type(hb07_res_fmt())),
 		?assertEqual({ok, {?HIXIE75, request}}, 
-			websocket_header:type(hx75_req_fmt())),
+			ws_header:type(hx75_req_fmt())),
 		?assertEqual({ok, {?HIXIE76, request}},
-		       	websocket_header:type(hx76_req_fmt())),
+		       	ws_header:type(hx76_req_fmt())),
 		?assertEqual({ok, {?HYBI, request}}, 
-			websocket_header:type(hb07_req_fmt()))
+			ws_header:type(hb07_req_fmt()))
 	].
 %------------------------------------------------------------------------------
 parse_test_1(Sample, E) ->
-	R = websocket_header:parse(Sample),
+	R = ws_header:parse(Sample),
 	print(R, E),
 	{R, E}.
 %------------------------------------------------------------------------------
