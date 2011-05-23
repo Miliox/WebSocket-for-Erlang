@@ -6,7 +6,7 @@ SHELL=/bin/sh
 
 #Erlang Configuration
 PADIR=-pa ebin
-MODULELIST=[gen_ws, websocket_header]
+MODULELIST=[gen_ws, ws_header]
 
 run: all_test
 	erl $(PADIR)
@@ -28,5 +28,5 @@ test: all_test
 
 test_verbose: test
 	erl -noshell $(PADIR) \
-	-eval "websocket_header_tests:parse_test()" \
+	-eval "ws_header_tests:parse_test()" \
 	-s init stop
