@@ -195,18 +195,10 @@ to_string(FList) ->
 	end.
 %------------------------------------------------------------------------------
 to_string_1(Draft, Type, FList) ->
-	StartLine = to_string_start_line(Draft, Type, FList),
-	to_string_2(StartLine, FList).
-%------------------------------------------------------------------------------
-to_string_2(StartLine, FList) ->
-	FLines = map_to_string_field(FList),
-	to_string_3(FLines, StartLine).
-%------------------------------------------------------------------------------
-to_string_3([], H) ->
-	H;
-to_string_3([Line|T], Header) ->
-	H = Header ++ "\r\n" ++ Line,
-	to_string_3(T, H).
+	StartLine  = to_string_start_line(Draft, Type, FList),
+	FieldLines = map_to_string_field(FList),
+
+	string:join([StartLine|FieldLines], "\r\n").
 %------------------------------------------------------------------------------
 to_string_start_line(_Draft, request, FList) ->
 	{found, Method} = find(?WS_METHOD, FList),
@@ -223,18 +215,17 @@ to_string_start_line(_, _, _) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
 map_to_string_field(FList) ->
-	map_to_string_field(FList, []).
+	[String||
+		Field  <- FList, 
+		String <- [to_string_field(Field)], 
+		is_list(String)].
 %------------------------------------------------------------------------------
-map_to_string_field([], R) ->
-	lists:reverse(R);
-map_to_string_field([F|T], L) ->
-	case F of
+to_string_field(Field) ->
+	case Field of
 		{Name, Value} when is_list(Name) andalso is_list(Value) ->
-			Field = Name ++ ": " ++ Value,
-			map_to_string_field(T, [Field|L]);
+			Name ++ ": " ++ Value;
 		{undefined, Value} when is_list(Value) ->
-			Field = Value,
-			map_to_string_field(T, [Field|L]);
+			Value;
 		_ ->
-			map_to_string_field(T, L)
+			Field
 	end.
