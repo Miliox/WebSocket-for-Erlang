@@ -213,7 +213,7 @@ hx76_req() ->
 	"Upgrade: WebSocket\r\n" ++
 	"Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5\r\n" ++
 	"Origin: http://example.com\r\n" ++
-	"\r\n^:ds[4U".
+	"\r\n^n:ds[4U".
 hx76_res() ->
 	"HTTP/1.1 101 WebSocket Protocol Handshake\r\n" ++
 	"Upgrade: WebSocket\r\n" ++
@@ -278,7 +278,7 @@ hx76_req_fmt() ->
 		{"Sec-WebSocket-Key1", "4 @1  46546xW%0l 1 5"},
 		{"Origin", "http://example.com"},
 		{undefined, []},
-		{undefined, "^:ds[4U"}
+		{undefined, "^n:ds[4U"}
 	].
 hx76_res_fmt() ->
 	[
