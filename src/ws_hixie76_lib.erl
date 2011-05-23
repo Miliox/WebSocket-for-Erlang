@@ -18,6 +18,14 @@
 
 %------------------------------------------------------------------------------
 gen_response(Request) ->
+	case catch(gen_response_0(Request)) of
+		Response when is_list(Response) ->
+			Response;
+		_ ->
+			{error, invalid_request}
+	end.
+%------------------------------------------------------------------------------
+gen_response_0(Request) ->
 	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
 	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 	{found, Origin} = ws_header:find(?HIXIE76_ORIGIN_REQ, Request),
@@ -63,6 +71,5 @@ decode_key(K) ->
 	TotalSpaces  = length([Sp|| Sp <- K, Sp == $  ]),
 
 	trunc(Number / TotalSpaces).
-
 %------------------------------------------------------------------------------
 

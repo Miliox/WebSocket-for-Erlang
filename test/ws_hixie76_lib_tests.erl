@@ -16,8 +16,35 @@
 -include("ws_protocol_header.hrl").
 
 gen_response_test() ->
+[
 	?assertEqual(
 		ws_header_tests:hx76_res_fmt(), 
 		ws_hixie76_lib:gen_response(
 			ws_header_tests:hx76_req_fmt()
-		)).
+		)),
+	?assertEqual(
+		{error, invalid_request}, 
+		ws_hixie76_lib:gen_response(
+			ws_header_tests:hx76_res_fmt()
+		)),
+	?assertEqual(
+		{error, invalid_request}, 
+		ws_hixie76_lib:gen_response(
+			ws_header_tests:hx75_req_fmt()
+		)),
+	?assertEqual(
+		{error, invalid_request}, 
+		ws_hixie76_lib:gen_response(
+			ws_header_tests:hx75_res_fmt()
+		)),
+	?assertEqual(
+		{error, invalid_request}, 
+		ws_hixie76_lib:gen_response(
+			ws_header_tests:hb07_req_fmt()
+		)),
+	?assertEqual(
+		{error, invalid_request}, 
+		ws_hixie76_lib:gen_response(
+			ws_header_tests:hb07_res_fmt()
+		))
+].
