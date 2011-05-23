@@ -13,8 +13,10 @@
 -vsn(2).
 
 -export([parse/1, define/1, find/2]).
--include("websocket_regex_header.hrl").
 -include("websocket_protocol_header.hrl").
+-include("websocket_regex_header.hrl").
+
+-define(ERROR_HEADER, {error, invalid_header}).
 
 %------------------------------------------------------------------------------
 % HTTP Header -> [{Key, Value}, ...]
@@ -71,7 +73,7 @@ define(FList) when is_list(FList) ->
 		true ->
 			define_1(FList);
 		false ->
-			{error, invalid_header}
+			?ERROR_HEADER
 	end;
 define(_) ->
 	erlang:error(badarg).
@@ -89,7 +91,7 @@ define_2(FList) ->
 		{found, ?WS_MET_VAL} ->
 			define_request(FList);
 		{notfound, notfound} ->
-			{error, invalid_header}
+			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
 define_request(FList) ->
@@ -107,7 +109,7 @@ define_request_hixie(FList) ->
 		[{found, _}, {found, _}] ->
 			{?HIXIE76, request};
 		_ ->
-			{error, invalid_request_hixie}
+			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
 define_request_hybi(FList) ->
@@ -119,19 +121,49 @@ define_request_hybi(FList) ->
 		[{found, _}, {found, _}, {found, _}] ->
 			{?HYBI, request};
 		_ ->
-			{error, invalid_request_hybi}
+			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_response(Reason, _FList) ->
+define_response(Reason, FList) ->
 	case Reason of
 		?HIXIE75_REASON_VAL ->
-			{?HIXIE75, response};
+			define_response_hixie75(FList);
 		?HIXIE76_REASON_VAL ->
-			{?HIXIE76, response};
+			define_response_hixie76(FList);
 		?HYBI_REASON_VAL ->
+			define_response_hybi(FList);
+		_ ->
+			?ERROR_HEADER
+	end.
+%------------------------------------------------------------------------------
+define_response_hixie75(FList) ->
+	case [
+		find(?HIXIE75_ORIGIN_RES, FList),
+		find(?HIXIE75_LOCATION, FList)
+	] of
+		[{found, _}, {found, _}] ->
+			{?HIXIE75, response};
+		_ ->
+			?ERROR_HEADER
+	end.
+%------------------------------------------------------------------------------
+define_response_hixie76(FList) ->
+	case [
+		find(?HIXIE76_ORIGIN_RES, FList),
+		find(?HIXIE76_LOCATION, FList)
+	] of
+		[{found, _}, {found, _}] ->
+			{?HIXIE76, response};
+		_ ->
+			?ERROR_HEADER
+	end.
+%------------------------------------------------------------------------------
+define_response_hybi(FList) ->
+	case find(?HYBI_ACCEPT, FList) of
+		{found, _} ->
 			{?HYBI, response};
 		_ ->
-			{error, invalid_response}
+			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
 is_ws_header(FList) ->
