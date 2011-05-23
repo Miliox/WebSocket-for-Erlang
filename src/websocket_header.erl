@@ -12,7 +12,7 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 
--export([parse/1, define/1, find/2]).
+-export([parse/1, type/1, find/2]).
 -include("websocket_protocol_header.hrl").
 -include("websocket_regex_header.hrl").
 
@@ -69,41 +69,41 @@ line_to_field(Line) ->
 field(K, V) -> {K, V}.
 %------------------------------------------------------------------------------
 % FList -> {WebSocketDraft, request|response}|{error, Reason}
-define(FList) when is_list(FList) ->
+type(FList) when is_list(FList) ->
 	case is_ws_header(FList)  of
 		true ->
-			define_1(FList);
+			type_1(FList);
 		false ->
 			?ERROR_HEADER
 	end;
-define(_) ->
+type(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
-define_1(FList) ->
+type_1(FList) ->
 	case find(?WS_REASON_PHRASE, FList) of
 		{found, Reason} ->
-			define_response(Reason, FList);
+			type_response(Reason, FList);
 		notfound ->
-			define_2(FList)
+			type_2(FList)
 	end.
 %------------------------------------------------------------------------------
-define_2(FList) ->
+type_2(FList) ->
 	case find(?WS_METHOD, FList) of
 		{found, ?WS_MET_VAL} ->
-			define_request(FList);
+			type_request(FList);
 		{notfound, notfound} ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_request(FList) ->
+type_request(FList) ->
 	case find(?WS_ORIGIN, FList) of
 		{found, _} ->
-			define_request_hixie(FList);
+			type_request_hixie(FList);
 		notfound ->
-			define_request_hybi(FList)
+			type_request_hybi(FList)
 	end.
 %------------------------------------------------------------------------------
-define_request_hixie(FList) ->
+type_request_hixie(FList) ->
 	case [find(?HIXIE76_KEY1, FList),find(?HIXIE76_KEY2, FList)] of
 		[notfound, notfound] ->
 			?DEFINED_HEADER(?HIXIE75, request);
@@ -113,7 +113,7 @@ define_request_hixie(FList) ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_request_hybi(FList) ->
+type_request_hybi(FList) ->
 	case [ 
 		find(?HYBI_KEY,     FList),
 		find(?HYBI_ORIGIN,  FList),
@@ -125,19 +125,19 @@ define_request_hybi(FList) ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_response(Reason, FList) ->
+type_response(Reason, FList) ->
 	case Reason of
 		?HIXIE75_REASON_VAL ->
-			define_response_hixie75(FList);
+			type_response_hixie75(FList);
 		?HIXIE76_REASON_VAL ->
-			define_response_hixie76(FList);
+			type_response_hixie76(FList);
 		?HYBI_REASON_VAL ->
-			define_response_hybi(FList);
+			type_response_hybi(FList);
 		_ ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_response_hixie75(FList) ->
+type_response_hixie75(FList) ->
 	case [
 		find(?HIXIE75_ORIGIN_RES, FList),
 		find(?HIXIE75_LOCATION, FList)
@@ -148,7 +148,7 @@ define_response_hixie75(FList) ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_response_hixie76(FList) ->
+type_response_hixie76(FList) ->
 	case [
 		find(?HIXIE76_ORIGIN_RES, FList),
 		find(?HIXIE76_LOCATION, FList)
@@ -159,7 +159,7 @@ define_response_hixie76(FList) ->
 			?ERROR_HEADER
 	end.
 %------------------------------------------------------------------------------
-define_response_hybi(FList) ->
+type_response_hybi(FList) ->
 	case find(?HYBI_ACCEPT, FList) of
 		{found, _} ->
 			?DEFINED_HEADER(?HYBI, response);

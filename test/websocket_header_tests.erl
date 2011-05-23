@@ -150,20 +150,20 @@ find_test() ->
 		?assertEqual(notfound, Find(?HYBI_VERSION,HB7R) )
 	].
 %------------------------------------------------------------------------------
-define_test() ->
+type_test() ->
 	[
 		?assertEqual({ok, {?HIXIE75, response}}, 
-			websocket_header:define(hx75_res_fmt())),
+			websocket_header:type(hx75_res_fmt())),
 		?assertEqual({ok, {?HIXIE76, response}}, 
-			websocket_header:define(hx76_res_fmt())),
-		?assertEqual({ok, {?HYBI,    response}}, 
-			websocket_header:define(hb07_res_fmt())),
+			websocket_header:type(hx76_res_fmt())),
+		?assertEqual({ok, {?HYBI, response}}, 
+			websocket_header:type(hb07_res_fmt())),
 		?assertEqual({ok, {?HIXIE75, request}}, 
-			websocket_header:define(hx75_req_fmt())),
+			websocket_header:type(hx75_req_fmt())),
 		?assertEqual({ok, {?HIXIE76, request}},
-		       	websocket_header:define(hx76_req_fmt())),
+		       	websocket_header:type(hx76_req_fmt())),
 		?assertEqual({ok, {?HYBI, request}}, 
-			websocket_header:define(hb07_req_fmt()))
+			websocket_header:type(hb07_req_fmt()))
 	].
 %------------------------------------------------------------------------------
 parse_test_1(Sample, E) ->
