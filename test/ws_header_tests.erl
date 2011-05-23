@@ -166,6 +166,18 @@ type_test() ->
 			ws_header:type(hb07_req_fmt()))
 	].
 %------------------------------------------------------------------------------
+to_string_test() ->
+	[
+		?assertEqual(hx75_req(), ws_header:to_string( hx75_req_fmt() ) ),
+		?assertEqual(hx75_res(), ws_header:to_string( hx75_res_fmt() ) ),
+
+		?assertEqual(hx76_req(), ws_header:to_string( hx76_req_fmt() ) ),
+		?assertEqual(hx76_res(), ws_header:to_string( hx76_res_fmt() ) ),
+
+		?assertEqual(hb07_req(), ws_header:to_string( hb07_req_fmt() ) ),
+		?assertEqual(hb07_res(), ws_header:to_string( hb07_res_fmt() ) )
+	].
+%------------------------------------------------------------------------------
 parse_test_1(Sample, E) ->
 	R = ws_header:parse(Sample),
 	print(R, E),

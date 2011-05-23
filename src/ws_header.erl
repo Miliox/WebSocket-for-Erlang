@@ -12,7 +12,7 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 
--export([parse/1, type/1, find/2]).
+-export([parse/1, type/1, find/2, to_string/1]).
 -include("ws_protocol_header.hrl").
 -include("ws_re_header.hrl").
 
@@ -185,3 +185,56 @@ find(FName, FList) ->
 			notfound
 	end.
 %------------------------------------------------------------------------------
+% FList -> string()
+to_string(FList) ->
+	case type(FList) of
+		{ok, {Draft, Type}} ->
+			to_string_1(Draft, Type, FList);
+		_ ->
+			erlang:error(badarg)
+	end.
+%------------------------------------------------------------------------------
+to_string_1(Draft, Type, FList) ->
+	StartLine = to_string_start_line(Draft, Type, FList),
+	to_string_2(StartLine, FList).
+%------------------------------------------------------------------------------
+to_string_2(StartLine, FList) ->
+	FLines = map_to_string_field(FList),
+	to_string_3(FLines, StartLine).
+%------------------------------------------------------------------------------
+to_string_3([], H) ->
+	H;
+to_string_3([Line|T], Header) ->
+	H = Header ++ "\r\n" ++ Line,
+	to_string_3(T, H).
+%------------------------------------------------------------------------------
+to_string_start_line(_Draft, request, FList) ->
+	{found, Method} = find(?WS_METHOD, FList),
+	{found, Uri}    = find(?WS_URI, FList),
+	
+	Method ++ " " ++ Uri ++ " HTTP/1.1";
+to_string_start_line(?HIXIE75, response, _) ->
+	"HTTP/1.1 101 " ++ ?HIXIE75_REASON_VAL;
+to_string_start_line(?HIXIE76, response, _) ->
+	"HTTP/1.1 101 " ++ ?HIXIE76_REASON_VAL;
+to_string_start_line(?HYBI, response, _) ->
+	"HTTP/1.1 101 " ++ ?HYBI_REASON_VAL;
+to_string_start_line(_, _, _) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+map_to_string_field(FList) ->
+	map_to_string_field(FList, []).
+%------------------------------------------------------------------------------
+map_to_string_field([], R) ->
+	lists:reverse(R);
+map_to_string_field([F|T], L) ->
+	case F of
+		{Name, Value} when is_list(Name) andalso is_list(Value) ->
+			Field = Name ++ ": " ++ Value,
+			map_to_string_field(T, [Field|L]);
+		{undefined, Value} when is_list(Value) ->
+			Field = Value,
+			map_to_string_field(T, [Field|L]);
+		_ ->
+			map_to_string_field(T, L)
+	end.
