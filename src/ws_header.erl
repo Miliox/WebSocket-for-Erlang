@@ -227,5 +227,5 @@ to_string_field(Field) ->
 		{undefined, Value} when is_list(Value) ->
 			Value;
 		_ ->
-			Field
+			ignore
 	end.
