@@ -68,7 +68,7 @@ line_to_field(Line) ->
 %------------------------------------------------------------------------------
 field(K, V) -> {K, V}.
 %------------------------------------------------------------------------------
-% FList -> {WebSocketDraft, request|response}|{error, Reason}
+% FList -> {ok, {WebSocketDraft, request|response}}|{error, Reason}
 type(FList) when is_list(FList) ->
 	case is_ws_header(FList)  of
 		true ->
