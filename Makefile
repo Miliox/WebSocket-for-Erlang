@@ -28,5 +28,5 @@ test: all_test
 
 test_verbose: test
 	erl -noshell $(PADIR) \
-	-eval "io:format(\"~p\", [ws_hixie76_lib:make_challenge()])" \
+	-eval "io:format(\"~p\", [ws_hixie76_lib:make_trial()])" \
 	-s init stop

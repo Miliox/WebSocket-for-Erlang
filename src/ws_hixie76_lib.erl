@@ -14,17 +14,18 @@
 
 -include("ws_protocol_header.hrl").
 
--export([gen_response/1, make_challenge/0]).
--define(INT4, 16#7FFFFFFF).
+-export([gen_response/1, make_trial/0]).
 -define(ASCII, 16#7F).
 -define(BYTE,  16#FF).
 -define(KEY3_SIZE, 8).
 -define(MAX_SPACE, 16).
+-define(INT4, 16#7FFFFFFF).
+-define(NOSPACE, 0).
 
 -define(VALID_CHAR, 
 	"abcdefghijklmnopqrstuvwxyz" ++
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
-	"'\"+-*%!@&^$#").
+	"'\"\\{}[]?.,<>|+-*%!@&^$#").
 %------------------------------------------------------------------------------
 gen_response(Request) ->
 	case catch(gen_response_1(Request)) of
@@ -35,17 +36,20 @@ gen_response(Request) ->
 	end.
 %------------------------------------------------------------------------------
 gen_response_1(Request) ->
+	Scheme = "ws://",
 	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
 	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 	{found, Origin} = ws_header:find(?HIXIE76_ORIGIN_REQ, Request),
 	
+	Location = Scheme ++ Host ++ Uri,
+
 	Response = [
 		{?HIXIE76_STATUS_CODE,   "101"},
 		{?HIXIE76_REASON_PHRASE, ?HIXIE76_REASON_VAL},
-		{"Upgrade", "WebSocket"},
-		{"Connection", "Upgrade"},
+		{?HIXIE76_UPGRADE,    ?HIXIE76_UPG_VAL},
+		{?HIXIE76_CONNECTION, ?HIXIE76_CON_VAL},
 		{?HIXIE76_ORIGIN_RES, Origin},
-		{?HIXIE76_LOCATION, "ws://"++ Host ++ Uri}],
+		{?HIXIE76_LOCATION,   Location}],
 
 	gen_response_2(Response, Request).
 %------------------------------------------------------------------------------
@@ -59,16 +63,16 @@ gen_response_2(Response, Request) ->
 	end.
 %------------------------------------------------------------------------------
 gen_response_3(Response, Request) ->
-	Key = resolve_challege(Request),
+	Key = resolve_trial(Request),
 	Response ++ [{undefined, []},{undefined, Key}].
 %------------------------------------------------------------------------------
-resolve_challege(Request) when is_list(Request)->
-	{found, EncKey1} = ws_header:find(?HIXIE76_KEY1, Request),
-	{found, EncKey2} = ws_header:find(?HIXIE76_KEY2, Request),
-	{undefined, StrKey3} = lists:last(Request),
+resolve_trial(Request) when is_list(Request)->
+	{found, K1} = ws_header:find(?HIXIE76_KEY1, Request),
+	{found, K2} = ws_header:find(?HIXIE76_KEY2, Request),
+	{undefined, K3} = lists:last(Request),
 	
-	resolve_challege({EncKey1, EncKey2, StrKey3});
-resolve_challege({EncKey1, EncKey2, StrKey3}) ->
+	resolve_trial({K1, K2, K3});
+resolve_trial({EncKey1, EncKey2, StrKey3}) ->
 	Key1 = decode_key(EncKey1),
 	Key2 = decode_key(EncKey2),
 	Key3 = list_to_binary(StrKey3),
@@ -83,63 +87,59 @@ decode_key(K) ->
 
 	trunc(Number / TotalSpaces).
 %------------------------------------------------------------------------------
-make_challenge() ->
-	EncKey1 = gen_encoded_key(),
-	EncKey2 = gen_encoded_key(),
-	StrKey3 = gen_key3(),
+make_trial() ->
+	random:seed(now()),
 
-	Solved = resolve_challege({EncKey1, EncKey2, StrKey3}),
-	{EncKey1, EncKey2, StrKey3, Solved}.
+	K1 = random_encode_key(),
+	K2 = random_encode_key(),
+	K3 = random_key3(),
+	Solved = resolve_trial({K1, K2, K3}),
+
+	{K1, K2, K3, Solved}.
 %------------------------------------------------------------------------------
-gen_encoded_key() ->
+random_encode_key() ->
 	Number = random:uniform(?INT4),
 	Spaces = random:uniform(?MAX_SPACE),
-
 	Key = Number * Spaces,
-	case Key >= ?INT4 of
+
+	case (Key =< ?INT4) of
 		true ->
-			gen_encoded_key();
+			encode_key(Number, Spaces);
 		false ->
-			to_encoded_key(Number, Spaces)
+			random_encode_key()
 	end.
 %------------------------------------------------------------------------------
-to_encoded_key(Number, Spaces) 
-when is_integer(Number) andalso Spaces >= 0 ->
-	RevNumber = lists:reverse(
-		integer_to_list(Number)),
-	to_encoded_key_1(RevNumber, Spaces, []).
+encode_key(N, Spaces) 
+when is_integer(N) andalso Spaces >= 0 ->
+	[Int|Rest] = integer_to_list(N),
+	Reverse = lists:reverse(Rest),
+
+	[Int|encode_key_1(Reverse, Spaces, [])].
 %------------------------------------------------------------------------------
-to_encoded_key_1([], 0, Str) ->
-	lists:reverse(Str);
-to_encoded_key_1(Number, 0, Str) ->
+encode_key_1([], ?NOSPACE, Buffer) ->
+	lists:reverse(Buffer);
+encode_key_1([Int|Rest]=Number, ?NOSPACE, Buffer) ->
 	case random:uniform() of
-		_Low when _Low < 0.5 ->
-			Char = random_char(),
-			to_encoded_key_1(Number, 0, [Char|Str]);
-		_Hig ->
-			[Char|Rest] = Number,
-			to_encoded_key_1(Rest, 0, [Char|Str])
+		_Trash when _Trash < 0.5 ->
+			encode_key_1(Number, ?NOSPACE, [random_char()|Buffer]);
+		_Int ->
+			encode_key_1(Rest, ?NOSPACE, [Int|Buffer])
 	end;
-to_encoded_key_1([], Spaces, Str) ->
+encode_key_1([], Spaces, Buffer) ->
 	case random:uniform() of
-		_Low when _Low < 0.5 ->
-			Char = random_char(),
-			to_encoded_key_1([], Spaces, [Char|Str]);
-		_Hig ->
-			Char = $ , 
-			to_encoded_key_1([], Spaces - 1, [Char|Str])
+		_Trash when _Trash < 0.5 ->
+			encode_key_1([], Spaces, [random_char()|Buffer]);
+		_Space ->
+			encode_key_1([], (Spaces-1), [$ |Buffer])
 	end;
-to_encoded_key_1(Number, Spaces, Str) ->
+encode_key_1([Int|Rest]=Number, Spaces, Buffer) ->
 	case random:uniform() of
-		_Low when _Low < 0.33 ->
-			Char = random_char(),
-			to_encoded_key_1(Number, Spaces, [Char|Str]);
-		_Mid when _Mid < 0.66 ->
-			Char = $ ,
-			to_encoded_key_1(Number, Spaces - 1, [Char|Str]);
-		_Hig ->
-			[Char|Rest] = Number,
-			to_encoded_key_1(Rest, Spaces, [Char|Str])
+		_Trash when _Trash < 0.33 ->
+			encode_key_1(Number, Spaces, [random_char()|Buffer]);
+		_Space when _Space < 0.66 ->
+			encode_key_1(Number, (Spaces-1), [$ |Buffer]);
+		_Int ->
+			encode_key_1(Rest, Spaces, [Int|Buffer])
 	end.
 %------------------------------------------------------------------------------
 random_char() ->
@@ -151,14 +151,14 @@ random_char() ->
 			random_char()
 	end.
 %------------------------------------------------------------------------------
-gen_key3() ->
-	gen_key3_1(?KEY3_SIZE, []).
+random_key3() ->
+	random_key3(?KEY3_SIZE, []).
 %------------------------------------------------------------------------------
-gen_key3_1(0, Buffer) ->
+random_key3(0, Buffer) ->
 	Buffer;
-gen_key3_1(N, Buffer) ->
+random_key3(I, Buffer) ->
 	Byte = random_byte(),
-	gen_key3_1(N-1, [Byte|Buffer]).
+	random_key3(I-1, [Byte|Buffer]).
 %------------------------------------------------------------------------------
 random_byte() ->
 	Byte = random:uniform(?BYTE),
