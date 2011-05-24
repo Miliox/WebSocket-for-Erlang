@@ -14,6 +14,13 @@
 
 -include("ws_protocol_header.hrl").
 -include("data_size.hrl").
+%------------------------------------------------------------------------------
+-import(erlang).
+-import(lists).
+-import(random).
+-import(string).
+-import(ws_header).
+%------------------------------------------------------------------------------
 -export([gen_response/1, make_trial/0, resolve_trial/1]).
 -export([encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
@@ -115,7 +122,7 @@ make_trial() ->
 	{K1, K2, K3, Solution}.
 %------------------------------------------------------------------------------
 random_encode_key() ->
-	Key = random:uniform(?INT4),
+	Key    = random:uniform(?INT4),
 	Spaces = random:uniform(?MAX_SPACE) + ?MIN_SPACE,
 
 	case ((Key * Spaces) < ?INT4) of
