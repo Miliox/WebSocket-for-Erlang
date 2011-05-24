@@ -15,6 +15,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("ws_protocol_header.hrl").
 
+%------------------------------------------------------------------------------
 gen_response_test() ->
 [
 	?assertEqual(
@@ -48,3 +49,25 @@ gen_response_test() ->
 			ws_header_tests:hb07_res_fmt()
 		))
 ].
+%------------------------------------------------------------------------------
+make_trial_test() ->
+	Trial = ws_hixie76_lib:make_trial(),
+	{K1, K2, K3, Solution} = Trial,
+	Answer = ws_hixie76_lib:resolve_trial({K1,K2,K3}),
+
+	[
+		?assertEqual(Solution, Answer),
+		?assertEqual(8, length(K3) ),
+		?assertEqual(16,length(Solution) )].
+%------------------------------------------------------------------------------
+resolve_trial_test() ->
+	K1 = "4 @1  46546xW%0l 1 5",
+	K2 = "12998 5 Y3 1  .P00",
+	K3 = "^n:ds[4U",
+	
+	Solution = "8jKS'y:G*Co,Wxa-",
+	Answer = ws_hixie76_lib:resolve_trial({K1,K2,K3}),
+	
+	[ ?assertEqual(Solution, Answer) ].
+%------------------------------------------------------------------------------
+

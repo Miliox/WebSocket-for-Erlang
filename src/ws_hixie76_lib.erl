@@ -18,6 +18,7 @@
 -define(ASCII, 16#7F).
 -define(BYTE,  16#FF).
 -define(KEY3_SIZE, 8).
+-define(MIN_SPACE, 1).
 -define(MAX_SPACE, 16).
 -define(INT4, 16#7FFFFFFF).
 -define(NOSPACE, 0).
@@ -99,7 +100,7 @@ make_trial() ->
 %------------------------------------------------------------------------------
 random_encode_key() ->
 	Number = random:uniform(?INT4),
-	Spaces = random:uniform(?MAX_SPACE),
+	Spaces = random:uniform(?MAX_SPACE) + ?MIN_SPACE,
 	Key = Number * Spaces,
 
 	case (Key =< ?INT4) of
