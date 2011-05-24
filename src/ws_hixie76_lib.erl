@@ -15,12 +15,16 @@
 -include("ws_protocol_header.hrl").
 
 -export([gen_response/1, make_challenge/0]).
--define(MAX_INT4, 16#7FFFFFFF).
+-define(INT4, 16#7FFFFFFF).
 -define(ASCII, 16#7F).
 -define(BYTE,  16#FF).
 -define(KEY3_SIZE, 8).
+-define(MAX_SPACE, 16).
 
--define(VALID_CHAR, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*%!@&^$#").
+-define(VALID_CHAR, 
+	"abcdefghijklmnopqrstuvwxyz" ++
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
+	"'\"+-*%!@&^$#").
 %------------------------------------------------------------------------------
 gen_response(Request) ->
 	case catch(gen_response_1(Request)) of
@@ -88,11 +92,11 @@ make_challenge() ->
 	{EncKey1, EncKey2, StrKey3, Solved}.
 %------------------------------------------------------------------------------
 gen_encoded_key() ->
-	Number = random:uniform(?MAX_INT4),
-	Spaces = random:uniform(16),
+	Number = random:uniform(?INT4),
+	Spaces = random:uniform(?MAX_SPACE),
 
 	Key = Number * Spaces,
-	case Key >= ?MAX_INT4 of
+	case Key >= ?INT4 of
 		true ->
 			gen_encoded_key();
 		false ->
@@ -157,4 +161,12 @@ gen_key3_1(N, Buffer) ->
 	gen_key3_1(N-1, [Byte|Buffer]).
 %------------------------------------------------------------------------------
 random_byte() ->
-	random:uniform(?BYTE).
+	Byte = random:uniform(?BYTE),
+	case Byte of
+		BreakLine when 
+			BreakLine == $\r orelse 
+			BreakLine == $\n ->
+				random_byte();
+		_ ->
+			Byte
+	end.
