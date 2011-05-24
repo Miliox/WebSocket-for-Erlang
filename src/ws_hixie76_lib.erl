@@ -95,7 +95,7 @@ resolve_trial({Key1, Key2, Key3})
 when 
 	is_integer(Key1) andalso 
 	is_integer(Key2) andalso
-	is_list(Key3)  andalso
+	is_list(Key3)    andalso
 	length(Key3) == ?KEY3_SIZE ->
 	BinKey3 = list_to_binary(Key3),
 

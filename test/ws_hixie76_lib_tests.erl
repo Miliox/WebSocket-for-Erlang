@@ -62,11 +62,15 @@ make_trial_test() ->
 %------------------------------------------------------------------------------
 resolve_trial_test() ->
 	% Draft-Hixie76-Example1
+	Request = ws_header_tests:hx76_req_fmt(),
+	Answer = ws_hixie76_lib:resolve_trial(Request),
+
 	K1_1 = "4 @1  46546xW%0l 1 5",
 	K2_1 = "12998 5 Y3 1  .P00",
 	K3_1 = "^n:ds[4U",
-	Solution_1 = "8jKS'y:G*Co,Wxa-",
 	Answer_1 = ws_hixie76_lib:resolve_trial({K1_1,K2_1,K3_1}),
+
+	Solution_1 = "8jKS'y:G*Co,Wxa-",
 	% Draft-Hixie76-Example2
 	K1_2 = "18x 6]8vM;54 *(5:  {   U1]8  z [  8",
 	K2_2 = "1_ tx7X d  <  nw  334J702) 7]o}` 0",
@@ -75,6 +79,7 @@ resolve_trial_test() ->
 	Answer_2 = ws_hixie76_lib:resolve_trial({K1_2,K2_2,K3_2}),
 
 	[ 
+		?assertEqual(Solution_1, Answer), 
 		?assertEqual(Solution_1, Answer_1), 
 		?assertEqual(Solution_2, Answer_2)
 	].
