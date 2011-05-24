@@ -61,12 +61,13 @@ make_trial_test() ->
 		?assertEqual(16,length(Solution) )].
 %------------------------------------------------------------------------------
 resolve_trial_test() ->
+	% Draft-Hixie76-Example1
 	K1_1 = "4 @1  46546xW%0l 1 5",
 	K2_1 = "12998 5 Y3 1  .P00",
 	K3_1 = "^n:ds[4U",
 	Solution_1 = "8jKS'y:G*Co,Wxa-",
 	Answer_1 = ws_hixie76_lib:resolve_trial({K1_1,K2_1,K3_1}),
-	
+	% Draft-Hixie76-Example2
 	K1_2 = "18x 6]8vM;54 *(5:  {   U1]8  z [  8",
 	K2_2 = "1_ tx7X d  <  nw  334J702) 7]o}` 0",
 	K3_2 = "Tm[K T2u",
@@ -75,38 +76,34 @@ resolve_trial_test() ->
 
 	[ 
 		?assertEqual(Solution_1, Answer_1), 
-		?assertEqual(Solution_2, Answer_2) ].
+		?assertEqual(Solution_2, Answer_2)
+	].
 %------------------------------------------------------------------------------
 decode_key_test() ->
-	K1 = "4 @1  46546xW%0l 1 5",
-	K2 = "12998 5 Y3 1  .P00",
-	K3 = "18x 6]8vM;54 *(5:  {   U1]8  z [  8",
-	K4 = "1_ tx7X d  <  nw  334J702) 7]o}` 0",
+	% Draft-Hixie76-Example1
+	K1 = "4 @1  46546xW%0l 1 5", Key1 = trunc(4146546015 / 5), 
+	K2 = "12998 5 Y3 1  .P00",   Key2 = trunc(1299853100 / 5), 
+	% Draft-Hixie76-Example2
+	K3 = "18x 6]8vM;54 *(5:  {   U1]8  z [  8", Key3 = trunc(1868545188 / 12), 
+	K4 = "1_ tx7X d  <  nw  334J702) 7]o}` 0",  Key4 = trunc(1733470270 / 10), 
 
 	[
-		?assertEqual(trunc(4146546015 / 5), 
-			ws_hixie76_lib:decode_key(K1)),
-		?assertEqual(trunc(1299853100 / 5), 
-			ws_hixie76_lib:decode_key(K2)),
-		?assertEqual(trunc(1868545188 / 12), 
-			ws_hixie76_lib:decode_key(K3)),
-		?assertEqual(trunc(1733470270 / 10), 
-			ws_hixie76_lib:decode_key(K4))
+		?assertEqual(Key1, ws_hixie76_lib:decode_key(K1)),
+		?assertEqual(Key2, ws_hixie76_lib:decode_key(K2)),
+		?assertEqual(Key3, ws_hixie76_lib:decode_key(K3)),
+		?assertEqual(Key4, ws_hixie76_lib:decode_key(K4))
 	].
 %------------------------------------------------------------------------------
 encode_key_test() ->
-	% Draft-Hixie76-Example
-	K1 = 155712099,
-	S1 = 12,
-	EncKey1 = ws_hixie76_lib:encode_key(K1, S1),
-	io:format("{~p}", [EncKey1]),
-
-	K2 = 173347027,
-	S2 = 10,
-	EncKey2 = ws_hixie76_lib:encode_key(K2, S2),
+	% Draft-Hixie76-Example1
+	Key1 = 155712099, Sp1 = 12,
+	EncKey1 = ws_hixie76_lib:encode_key(Key1, Sp1),
+	% Draft-Hixie76-Example2
+	Key2 = 173347027, Sp2 = 10,
+	EncKey2 = ws_hixie76_lib:encode_key(Key2, Sp2),
 
 	[ 
-		?assertEqual(K1, ws_hixie76_lib:decode_key(EncKey1)),
-		?assertEqual(K2, ws_hixie76_lib:decode_key(EncKey2))
+		?assertEqual(Key1, ws_hixie76_lib:decode_key(EncKey1)),
+		?assertEqual(Key2, ws_hixie76_lib:decode_key(EncKey2))
 	].
 %------------------------------------------------------------------------------
