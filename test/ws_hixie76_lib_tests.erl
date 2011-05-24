@@ -61,13 +61,20 @@ make_trial_test() ->
 		?assertEqual(16,length(Solution) )].
 %------------------------------------------------------------------------------
 resolve_trial_test() ->
-	K1 = "4 @1  46546xW%0l 1 5",
-	K2 = "12998 5 Y3 1  .P00",
-	K3 = "^n:ds[4U",
+	K1_1 = "4 @1  46546xW%0l 1 5",
+	K2_1 = "12998 5 Y3 1  .P00",
+	K3_1 = "^n:ds[4U",
+	Solution_1 = "8jKS'y:G*Co,Wxa-",
+	Answer_1 = ws_hixie76_lib:resolve_trial({K1_1,K2_1,K3_1}),
 	
-	Solution = "8jKS'y:G*Co,Wxa-",
-	Answer = ws_hixie76_lib:resolve_trial({K1,K2,K3}),
-	
-	[ ?assertEqual(Solution, Answer) ].
+	K1_2 = "18x 6]8vM;54 *(5:  {   U1]8  z [  8",
+	K2_2 = "1_ tx7X d  <  nw  334J702) 7]o}` 0",
+	K3_2 = "Tm[K T2u",
+	Solution_2 = "fQJ,fN/4F4!~K~MH",
+	Answer_2 = ws_hixie76_lib:resolve_trial({K1_2,K2_2,K3_2}),
+
+	[ 
+		?assertEqual(Solution_1, Answer_1), 
+		?assertEqual(Solution_2, Answer_2) ].
 %------------------------------------------------------------------------------
 

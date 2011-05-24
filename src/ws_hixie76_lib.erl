@@ -94,9 +94,9 @@ make_trial() ->
 	K1 = random_encode_key(),
 	K2 = random_encode_key(),
 	K3 = random_key3(),
-	Solved = resolve_trial({K1, K2, K3}),
+	Solution = resolve_trial({K1, K2, K3}),
 
-	{K1, K2, K3, Solved}.
+	{K1, K2, K3, Solution}.
 %------------------------------------------------------------------------------
 random_encode_key() ->
 	Number = random:uniform(?INT4),
