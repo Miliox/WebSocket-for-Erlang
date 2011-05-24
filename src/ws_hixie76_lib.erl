@@ -99,20 +99,20 @@ make_trial() ->
 	{K1, K2, K3, Solution}.
 %------------------------------------------------------------------------------
 random_encode_key() ->
-	Number = random:uniform(?INT4),
+	Key = random:uniform(?INT4),
 	Spaces = random:uniform(?MAX_SPACE) + ?MIN_SPACE,
-	Key = Number * Spaces,
 
-	case (Key =< ?INT4) of
+	case ((Key * Spaces) =< ?INT4) of
 		true ->
-			encode_key(Number, Spaces);
+			encode_key(Key, Spaces);
 		false ->
 			random_encode_key()
 	end.
 %------------------------------------------------------------------------------
-encode_key(N, Spaces) 
-when is_integer(N) andalso Spaces >= 0 ->
-	[Int|Rest] = integer_to_list(N),
+encode_key(Key, Spaces) when is_integer(Key) andalso Spaces >= 0 ->
+	EncKey = Key * Spaces,
+
+	[Int|Rest] = integer_to_list(EncKey),
 	Reverse = lists:reverse(Rest),
 
 	[Int|encode_key_1(Reverse, Spaces, [])].
