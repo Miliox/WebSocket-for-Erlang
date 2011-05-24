@@ -78,30 +78,30 @@ gen_response_3(Response, Request) ->
 resolve_trial(Request) when is_list(Request)->
 	{found, K1} = ws_header:find(?HIXIE76_KEY1, Request),
 	{found, K2} = ws_header:find(?HIXIE76_KEY2, Request),
-	{undefined, K3} = lists:last(Request),
+	{undefined, Key3} = lists:last(Request),
 	
-	resolve_trial({K1, K2, K3});
-resolve_trial({EncKey1, EncKey2, StrKey3}) 
+	resolve_trial({K1, K2, Key3});
+resolve_trial({EncKey1, EncKey2, Key3}) 
 when 
 	is_list(EncKey1) andalso
 	is_list(EncKey2) andalso
-	is_list(StrKey3) ->
+	is_list(Key3) ->
 
 	Key1 = decode_key(EncKey1),
 	Key2 = decode_key(EncKey2),
-	Key3 = list_to_binary(StrKey3),
 
 	resolve_trial({Key1, Key2, Key3});
 resolve_trial({Key1, Key2, Key3})
 when 
 	is_integer(Key1) andalso 
 	is_integer(Key2) andalso
-	is_binary(Key3)  andalso
-	size(Key3) == ?KEY3_SIZE ->
+	is_list(Key3)  andalso
+	length(Key3) == ?KEY3_SIZE ->
+	BinKey3 = list_to_binary(Key3),
 
 	binary_to_list(
 		erlang:md5(
-			<<Key1:32, Key2:32, Key3/binary>>));
+			<<Key1:32, Key2:32, BinKey3/binary>>));
 resolve_trial(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
@@ -139,9 +139,8 @@ when
 
 	EncKey     = Key * Spaces,
 	[Int|Rest] = integer_to_list(EncKey),
-	Reverse    = lists:reverse(Rest),
 
-	[Int|encode_key_1(Reverse, Spaces, [])];
+	[Int|encode_key_1(Rest, Spaces, [])];
 encode_key(_, _) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
