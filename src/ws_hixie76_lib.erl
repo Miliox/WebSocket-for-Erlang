@@ -102,14 +102,14 @@ random_encode_key() ->
 	Key = random:uniform(?INT4),
 	Spaces = random:uniform(?MAX_SPACE) + ?MIN_SPACE,
 
-	case ((Key * Spaces) =< ?INT4) of
+	case ((Key * Spaces) < ?INT4) of
 		true ->
 			encode_key(Key, Spaces);
 		false ->
 			random_encode_key()
 	end.
 %------------------------------------------------------------------------------
-encode_key(Key, Spaces) when is_integer(Key) andalso Spaces >= 0 ->
+encode_key(Key, Spaces) when is_integer(Key) andalso Spaces > 0 ->
 	EncKey = Key * Spaces,
 
 	[Int|Rest] = integer_to_list(EncKey),
