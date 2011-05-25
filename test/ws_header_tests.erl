@@ -168,23 +168,36 @@ type_test() ->
 %------------------------------------------------------------------------------
 to_string_test() ->
 	[
-		?assertEqual(hx75_req(), ws_header:to_string( hx75_req_fmt() ) ),
-		?assertEqual(hx75_res(), ws_header:to_string( hx75_res_fmt() ) ),
+		?assertEqual(hx75_req(), 
+			to_string_test_1(hx75_req_fmt() , hx75_req()) ),
+		?assertEqual(hx75_res(),
+			to_string_test_1(hx75_res_fmt() , hx75_res()) ),
 
-		?assertEqual(hx76_req(), ws_header:to_string( hx76_req_fmt() ) ),
-		?assertEqual(hx76_res(), ws_header:to_string( hx76_res_fmt() ) ),
+		?assertEqual(hx76_req(),
+			to_string_test_1(hx76_req_fmt() , hx76_req()) ),
+		?assertEqual(hx76_res(), 
+			to_string_test_1(hx76_res_fmt() , hx76_res()) ),
 
-		?assertEqual(hb07_req(), ws_header:to_string( hb07_req_fmt() ) ),
-		?assertEqual(hb07_res(), ws_header:to_string( hb07_res_fmt() ) )
+		?assertEqual(hb07_req(),
+			to_string_test_1(hb07_req_fmt() , hb07_req()) ),
+		?assertEqual(hb07_res(),
+			to_string_test_1(hb07_res_fmt() , hb07_res()) )
 	].
+%------------------------------------------------------------------------------
+to_string_test_1(Sample, E) ->
+	R = ws_header:to_string(Sample),
+	io:format("entrada:~p~nresultado: ~n"++R++"~nesperado: ~n"++E++"~n", 
+		[Sample]),
+	E.
 %------------------------------------------------------------------------------
 parse_test_1(Sample, E) ->
 	R = ws_header:parse(Sample),
-	print(R, E),
+	print(Sample, R, E),
 	{R, E}.
 %------------------------------------------------------------------------------
-print(Result, Expected) ->
-	io:format("resultado: ~p~nesperado: ~p~n~n", [Result, Expected]).
+print(Input, Result, Expected) ->
+	io:format("entrada:~n"++Input++"~nresultado: ~p~nesperado: ~p~n~n", 
+		[Result, Expected]).
 %------------------------------------------------------------------------------
 hx75_req() ->
 	"GET /demo HTTP/1.1\r\n" ++

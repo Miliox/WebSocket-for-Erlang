@@ -28,5 +28,7 @@ test: all_test
 
 test_verbose: test
 	erl -noshell $(PADIR) \
-	-eval "io:format(\"~p\", [ws_hixie76_lib:make_trial()])" \
+	-eval "ws_header_tests:parse_test()" \
+	-eval "ws_header_tests:to_string_test()" \
+	-eval "io:format(\"make_trial:~n~p\", [ws_hixie76_lib:make_trial()])" \
 	-s init stop
