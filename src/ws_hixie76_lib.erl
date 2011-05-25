@@ -22,13 +22,12 @@
 -import(ws_header).
 %------------------------------------------------------------------------------
 -export([gen_response/1, make_trial/0, resolve_trial/1]).
--export([encode_key/2, decode_key/1]).
+-export([encode_key/1, encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
 %------------------------------------------------------------------------------
 -define(SPACE, $ ).
 -define(NO_SPACE,  0).
 -define(MIN_SPACE, 1).
--define(MAX_SPACE, 16).
 %------------------------------------------------------------------------------
 -define(KEY3_SIZE, 8).
 -define(VALID_PAD_CHAR, 
@@ -97,19 +96,21 @@ when
 	is_integer(Key2) andalso
 	is_list(Key3)    andalso
 	length(Key3) == ?KEY3_SIZE ->
-	BinKey3 = list_to_binary(Key3),
 
+	BinKey3 = list_to_binary(Key3),
 	binary_to_list(
 		erlang:md5(
 			<<Key1:32, Key2:32, BinKey3/binary>>));
 resolve_trial(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
-decode_key(K) ->
+decode_key(K) when is_list(K) ->
 	{Number, []} = string:to_integer([I|| I <- K, I >= $0 andalso I =< $9]),
 	TotalSpaces  = length([Sp|| Sp <- K, Sp == ?SPACE ]),
 
-	trunc(Number / TotalSpaces).
+	trunc(Number / TotalSpaces);
+decode_key(_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
 make_trial() ->
 	random:seed(now()),
@@ -122,15 +123,22 @@ make_trial() ->
 	{K1, K2, K3, Solution}.
 %------------------------------------------------------------------------------
 random_encode_key() ->
-	Key    = random:uniform(?INT4),
-	Spaces = random:uniform(?MAX_SPACE) + ?MIN_SPACE,
+	Key = random:uniform(?INT4),
+	encode_key(Key).
+%------------------------------------------------------------------------------
+encode_key(Key) 
+when 
+	is_integer(Key) andalso Key >= 0 ->
 
-	case ((Key * Spaces) < ?INT4) of
-		true ->
+	MaxSpaces = trunc(?INT4 / Key),
+	case random:uniform(MaxSpaces) of
+		Spaces when (Spaces > ?MIN_SPACE) ->
 			encode_key(Key, Spaces);
-		false ->
-			random_encode_key()
-	end.
+		_ ->
+			encode_key(Key, ?MIN_SPACE)
+	end;
+encode_key(_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
 encode_key(Key, Spaces) 
 when 
@@ -182,11 +190,10 @@ pad_char() ->
 random_key3() ->
 	random_key3(?KEY3_SIZE, []).
 %------------------------------------------------------------------------------
-random_key3(0, Buffer) ->
-	Buffer;
+random_key3(0, Key3) ->
+	Key3;
 random_key3(I, Buffer) ->
-	Byte = random_byte(),
-	random_key3(I-1, [Byte|Buffer]).
+	random_key3(I-1, [random_byte()|Buffer]).
 %------------------------------------------------------------------------------
 random_byte() ->
 	Byte = random:uniform(?BYTE),
@@ -198,3 +205,5 @@ random_byte() ->
 		_ ->
 			Byte
 	end.
+%------------------------------------------------------------------------------
+

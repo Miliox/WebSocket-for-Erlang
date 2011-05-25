@@ -61,10 +61,9 @@ make_trial_test() ->
 		?assertEqual(16,length(Solution) )].
 %------------------------------------------------------------------------------
 resolve_trial_test() ->
-	% Draft-Hixie76-Example1
 	Request = ws_header_tests:hx76_req_fmt(),
 	Answer = ws_hixie76_lib:resolve_trial(Request),
-
+	% Draft-Hixie76-Example1
 	K1_1 = "4 @1  46546xW%0l 1 5",
 	K2_1 = "12998 5 Y3 1  .P00",
 	K3_1 = "^n:ds[4U",
