@@ -8,7 +8,7 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(ws_hixie76_lib).
+-module(hixie76_lib).
 -author("elmiliox@gmail.com").
 -vsn(1).
 
