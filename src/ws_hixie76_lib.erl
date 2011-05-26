@@ -22,6 +22,7 @@
 -import(ws_header).
 %------------------------------------------------------------------------------
 -export([gen_response/1, make_trial/0, resolve_trial/1]).
+-export([frame/1, unframe/1]).
 -export([encode_key/1, encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
 %------------------------------------------------------------------------------
@@ -108,7 +109,7 @@ decode_key(K) when is_list(K) ->
 	{Number, []} = string:to_integer([I|| I <- K, I >= $0 andalso I =< $9]),
 	TotalSpaces  = length([Sp|| Sp <- K, Sp == ?SPACE ]),
 
-	trunc(Number / TotalSpaces);
+	Number div TotalSpaces;
 decode_key(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
@@ -130,7 +131,7 @@ encode_key(Key)
 when 
 	is_integer(Key) andalso Key >= 0 ->
 
-	MaxSpaces = trunc(?INT4 / Key),
+	MaxSpaces = ?INT4 div Key,
 	case random:uniform(MaxSpaces) of
 		Spaces when (Spaces > ?MIN_SPACE) ->
 			encode_key(Key, Spaces);
@@ -206,4 +207,50 @@ random_byte() ->
 			Byte
 	end.
 %------------------------------------------------------------------------------
-
+frame({Type, BinData}) when is_binary(BinData) ->
+	Data = binary_to_list(BinData),
+	frame({Type, Data});
+frame({text, Data}) when is_list(Data) ->
+	Frame = [16#00] ++ Data ++ [16#ff],
+	{ok, Frame};
+frame({binary, Data}) when is_list(Data) ->
+	{error, not_supported};
+frame(_) ->
+	{error, badarg}.
+%------------------------------------------------------------------------------
+unframe(BitStream) when is_binary(BitStream) ->
+	unframe(binary_to_list(BitStream));
+unframe(Stream) when is_list(Stream) ->
+	[FlagByte|Tail] = Stream,
+	case FlagByte of
+		Txt when Txt >= 0 orelse Txt < 16#80 ->
+			unframe_text(Stream);
+		Bin when Bin >= 16#80 orelse Bin < 16#ff ->
+			unframe_bin(Stream);
+		SignClose when SignClose == 16#ff ->
+			{ok, close, Tail};
+		_ ->
+			{error, badarg, Stream}
+	end;
+unframe(Unknown) ->
+	{error, badarg, Unknown}.
+%------------------------------------------------------------------------------
+unframe_text([TxtFlag|Tail]) 
+when 
+	TxtFlag <  16#80 andalso
+	TxtFlag >= 16#00 ->
+		unframe_text(Tail, []);
+unframe_text(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+unframe_text([], Buffer) ->
+	{incomplete, {text, Buffer}, []};
+unframe_text([16#ff|Tail], Buffer) ->
+	Data = lists:reverse(Buffer),
+	{ok, {text, Data}, Tail};
+unframe_text([Char|Tail], Buffer) ->
+	unframe_text(Tail, [Char|Buffer]).
+%------------------------------------------------------------------------------
+unframe_bin(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
