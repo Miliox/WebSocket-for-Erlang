@@ -14,55 +14,70 @@
 -vsn(1).
 
 %------------------------------------------------------------------------------
--include("ws_frame.hrl").
 -include("hixie_frame.hrl").
+-include("ws_frame.hrl").
 %------------------------------------------------------------------------------
--export([frame/1, unframe/1]).
+-export([frame/1, unframe/1, unframe/2]).
 %------------------------------------------------------------------------------
 frame({Type, BinData}) when is_binary(BinData) ->
 	Data = binary_to_list(BinData),
 	frame({Type, Data});
 frame({text, Data}) when is_list(Data) ->
 	Frame = [?FLAG_TXT] ++ Data ++ [?FLAG_END],
-	{ok, Frame};
+	?FRAME_SUCESS(Frame);
 frame({binary, Data}) when is_list(Data) ->
-	{error, not_supported};
+	?FRAME_ERROR(todo);
 frame(_) ->
-	{error, badarg}.
+	?FRAME_ERROR(badarg).
 %------------------------------------------------------------------------------
 unframe(BitStream) when is_binary(BitStream) ->
 	unframe(binary_to_list(BitStream));
-unframe(Stream) when is_list(Stream) ->
-	[Flag|Tail] = Stream,
+unframe([Flag|TailStream]=Stream) when is_list(Stream) ->
 	case Flag of
 		Txt when Txt >= ?TXT_LOW andalso Txt =< ?TXT_HIG ->
 			unframe_text(Stream);
 		Bin when Bin >= ?BIN_LOW orelse Bin =< ?BIN_HIG ->
 			unframe_bin(Stream);
 		?FLAG_END ->
-			{ok, ?FRAME_SIGN(?SIGN_CLOSE), Tail};
+			?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), TailStream);
 		_ ->
-			{error, badarg, Stream}
+			?UNFRAME_ERROR(badarg, Stream)
 	end;
-unframe(Unknown) ->
-	{error, badarg, Unknown}.
+unframe(BadArg) ->
+	?UNFRAME_ERROR(badarg, BadArg).
 %------------------------------------------------------------------------------
-unframe_text([Flag|Tail]) 
+unframe(BitStream, Context) when is_binary(BitStream) ->
+	unframe(binary_to_list(BitStream), Context);
+unframe(Stream, {Type, State}) when is_list(Stream) ->
+	case Type of
+		text ->
+			unframe_text(Stream, State);
+		binary ->
+			unframe_bin(Stream, State);
+		_ ->
+			?UNFRAME_ERROR(badarg, Stream)
+	end.
+unframe(BadArg, _) ->
+	?UNFRAME_ERROR(badarg, BadArg).
+%------------------------------------------------------------------------------
+unframe_text([Flag|Stream]) 
 when 
-	(Flag >= ?TXT_LOW)  andalso 
+	(Flag >= ?TXT_LOW) andalso 
 	(Flag =< ?TXT_HIG) ->
-		unframe_text(Tail, []);
+		unframe_text(Stream, []);
 unframe_text(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
 unframe_text([], Buffer) ->
-	{incomplete, {text, Buffer}, []};
-unframe_text([?FLAG_END|Tail], Buffer) ->
+	?UNFRAME_PARTIAL(?FRAME_TXT(Buffer), []);
+unframe_text([?FLAG_END|Stream], Buffer) ->
 	Text = lists:reverse(Buffer),
-	{ok, ?FRAME_TXT(Text), Tail};
-unframe_text([Char|Tail], Buffer) ->
-	unframe_text(Tail, [Char|Buffer]).
+	?UNFRAME_SUCESS(?FRAME_TXT(Text), Stream);
+unframe_text([Char|Stream], Buffer) ->
+	unframe_text(Stream, [Char|Buffer]).
 %------------------------------------------------------------------------------
 unframe_bin(_) ->
+	erlang:error(badarg).
+unframe_bin(_, _) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
