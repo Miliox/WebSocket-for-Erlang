@@ -21,7 +21,7 @@
 -define(DEFAULT_SECP, 443).
 %------------------------------------------------------------------------------
 parse(Url) ->
-	case re:run(Url, ?MP_WS_URL1, ?RE_WS_OPT) of
+	case re:run(Url, ?RE_WS_URL1, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port, Path]} ->
 			{normal, Domain, list_to_integer(Port), Path};
 		{match, ["wss", Domain, Port, Path]} ->
@@ -31,7 +31,7 @@ parse(Url) ->
 	end.
 %------------------------------------------------------------------------------
 parse_1(Url) ->
-	case re:run(Url, ?MP_WS_URL2, ?RE_WS_OPT) of
+	case re:run(Url, ?RE_WS_URL2, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Path]} ->
 			{normal, Domain, ?DEFAULT_PORT, Path};
 		{match, ["wss", Domain, Path]} ->
