@@ -31,4 +31,5 @@ test_verbose: test
 	-eval "ws_header_tests:parse_test()" \
 	-eval "ws_header_tests:to_string_test()" \
 	-eval "io:format(\"make_trial:~n~p\", [hixie76_lib:make_trial()])" \
+	-eval "io:format(\"request:~n~p~n\", [hixie76_lib:gen_request(\"ws://echo.websocket.org/\",\"http://websocket.org\")])" \
 	-s init stop

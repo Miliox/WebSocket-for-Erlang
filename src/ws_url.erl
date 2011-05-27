@@ -13,7 +13,7 @@
 -vsn(1).
 %------------------------------------------------------------------------------
 -import(re).
--export([parse/1, to_string/1]).
+-export([scheme/1, parse/1, to_string/1]).
 %------------------------------------------------------------------------------
 -include("ws_re_url.hrl").
 %------------------------------------------------------------------------------
@@ -23,9 +23,11 @@
 parse(Url) ->
 	case re:run(Url, ?RE_WS_URL1, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port, Path]} ->
-			{normal, Domain, list_to_integer(Port), Path};
+			{normal, Domain++":"++Port, 
+				list_to_integer(Port), Path};
 		{match, ["wss", Domain, Port, Path]} ->
-			{secure, Domain, list_to_integer(Port), Path};
+			{secure, Domain++":"++Port, 
+				list_to_integer(Port), Path};
 		nomatch ->
 			parse_1(Url)
 	end.
@@ -49,4 +51,9 @@ to_string({secure, Domain, ?DEFAULT_SECP, Path}) ->
 to_string({secure, Domain, Port, Path}) ->
 	"ws://" ++ Domain ++ ":" ++ integer_to_list(Port) ++ Path;
 to_string(_) ->
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
+scheme(normal) -> "ws";
+scheme(secure) -> "wss";
+scheme(_) -> 
 	erlang:error(badarg).

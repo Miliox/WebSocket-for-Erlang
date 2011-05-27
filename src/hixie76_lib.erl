@@ -20,8 +20,10 @@
 -import(random).
 -import(string).
 -import(ws_header).
+-import(ws_url).
 %------------------------------------------------------------------------------
--export([gen_response/1, make_trial/0, resolve_trial/1]).
+-export([gen_request/2, gen_request/3, gen_response/1]).
+-export([make_trial/0, resolve_trial/1]).
 -export([encode_key/1, encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
 %------------------------------------------------------------------------------
@@ -34,6 +36,37 @@
 	"abcdefghijklmnopqrstuvwxyz" ++
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
 	"'\"\\{}[]?.,<>|+-*%!@&^$#:;_").
+%------------------------------------------------------------------------------
+gen_request(Url, UrlOrigin) ->
+	gen_request(Url, UrlOrigin, []).
+%------------------------------------------------------------------------------
+gen_request(Url, UrlOrigin, SubProtocol) ->
+	{_, Host, _, Uri} = ws_url:parse(Url),
+	{K1, K2, K3, S} = make_trial(),
+
+	Request = [
+		{?HIXIE76_METHOD, ?HIXIE76_MET_VAL}, 
+		{?HIXIE76_URI, Uri}, 
+		{?HIXIE76_UPGRADE, ?HIXIE76_UPG_VAL},
+		{?HIXIE76_CONNECTION, ?HIXIE76_CON_VAL},
+		{?HIXIE76_KEY2, K2},
+		{?HIXIE76_HOST, Host},
+		{?HIXIE76_KEY1, K1},
+		{?HIXIE76_ORIGIN_REQ, UrlOrigin}],
+
+	gen_request_1(Request, SubProtocol, K3, S).
+%------------------------------------------------------------------------------
+gen_request_1(Request, SubProtocol, K3, S) ->
+	case  string:join(SubProtocol, ", ") of
+		[] ->
+			gen_request_2(Request, K3, S);
+		ProtField ->
+			gen_request_2(Request ++ 
+				[{?HIXIE76_PROTOCOL, ProtField}], K3, S)
+	end.
+%------------------------------------------------------------------------------
+gen_request_2(Request, K3, Solution) ->
+	{Request ++ [ {undefined, []}, {undefined, K3} ], Solution}.
 %------------------------------------------------------------------------------
 gen_response(Request) ->
 	case catch(gen_response_1(Request)) of
