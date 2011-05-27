@@ -56,7 +56,7 @@ unframe(Stream, {Type, State}) when is_list(Stream) ->
 			unframe_bin(Stream, State);
 		_ ->
 			?UNFRAME_ERROR(badarg, Stream)
-	end.
+	end;
 unframe(BadArg, _) ->
 	?UNFRAME_ERROR(badarg, BadArg).
 %------------------------------------------------------------------------------
