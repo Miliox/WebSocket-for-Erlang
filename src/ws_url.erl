@@ -23,11 +23,11 @@
 parse(Url) ->
 	case re:run(Url, ?RE_WS_URL1, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port, Path]} ->
-			{normal, Domain++":"++Port, 
-				list_to_integer(Port), Path};
+			Host = Domain++":"++Port,
+			{normal, Domain, Host, list_to_integer(Port), Path};
 		{match, ["wss", Domain, Port, Path]} ->
-			{secure, Domain++":"++Port, 
-				list_to_integer(Port), Path};
+			Host = Domain++":"++Port,
+			{secure, Domain, Host, list_to_integer(Port), Path};
 		nomatch ->
 			parse_1(Url)
 	end.
@@ -35,9 +35,11 @@ parse(Url) ->
 parse_1(Url) ->
 	case re:run(Url, ?RE_WS_URL2, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Path]} ->
-			{normal, Domain, ?DEFAULT_PORT, Path};
+			Host=Domain,
+			{normal, Domain, Host, ?DEFAULT_PORT, Path};
 		{match, ["wss", Domain, Path]} ->
-			{secure, Domain, ?DEFAULT_SECP, Path};
+			Host=Domain,
+			{secure, Domain, Host, ?DEFAULT_SECP, Path};
 		nomatch ->
 			error
 	end.

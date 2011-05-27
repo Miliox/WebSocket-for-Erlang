@@ -37,12 +37,13 @@
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
 	"'\"\\{}[]?.,<>|+-*%!@&^$#:;_").
 %------------------------------------------------------------------------------
-gen_request(Url, UrlOrigin) ->
-	gen_request(Url, UrlOrigin, []).
+gen_request(Url, FromUrl) ->
+	gen_request(Url, FromUrl, []).
 %------------------------------------------------------------------------------
-gen_request(Url, UrlOrigin, SubProtocol) ->
-	{_, Host, _, Uri} = ws_url:parse(Url),
+gen_request(Url, FromUrl, SubProtocol) ->
+	{_, _, Host, _, Uri} = ws_url:parse(Url),
 	{K1, K2, K3, S} = make_trial(),
+	Origin = FromUrl,
 
 	Request = [
 		{?HIXIE76_METHOD, ?HIXIE76_MET_VAL}, 
@@ -52,7 +53,7 @@ gen_request(Url, UrlOrigin, SubProtocol) ->
 		{?HIXIE76_KEY2, K2},
 		{?HIXIE76_HOST, Host},
 		{?HIXIE76_KEY1, K1},
-		{?HIXIE76_ORIGIN_REQ, UrlOrigin}],
+		{?HIXIE76_ORIGIN_REQ, Origin}],
 
 	gen_request_1(Request, SubProtocol, K3, S).
 %------------------------------------------------------------------------------
