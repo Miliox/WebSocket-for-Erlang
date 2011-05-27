@@ -16,6 +16,33 @@
 -include("ws_protocol_header.hrl").
 
 %------------------------------------------------------------------------------
+gen_request_test() ->
+	Url = "ws://echo.websocket.org/test",
+	Origin = "http://www.websocket.org",
+	SubProt = ["echo"],
+
+	{Request, Validate} = hixie76_lib:gen_request(Url, Origin, SubProt),
+	Response = hixie76_lib:gen_response(Request),
+
+	% ?debugMsg("request:~n"),
+	% ?debugFmt("~p",[Request]),
+	% ?debugMsg("response:~n"),
+	% ?debugFmt("~p",[Response]),
+
+	RespExp = [
+		{status, "101"},
+		{reason, "WebSocket Protocol Handshake"},
+		{"Upgrade", "WebSocket"},
+		{"Connection", "Upgrade"},
+		{"Sec-WebSocket-Origin", Origin},
+		{"Sec-WebSocket-Location", Url},
+		{"Sec-WebSocket-Protocol", "echo"},
+		{undefined, []},
+		{undefined, Validate}
+	],
+
+	[ ?assertEqual(RespExp, Response) ].
+%------------------------------------------------------------------------------
 gen_response_test() ->
 [
 	?assertEqual(
