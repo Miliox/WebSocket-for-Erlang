@@ -76,8 +76,31 @@ unframe_text([?FLAG_END|Stream], Buffer) ->
 unframe_text([Char|Stream], Buffer) ->
 	unframe_text(Stream, [Char|Buffer]).
 %------------------------------------------------------------------------------
-unframe_bin(_) ->
-	erlang:error(badarg).
-unframe_bin(_, _) ->
-	erlang:error(badarg).
+unframe_bin([InitialFlag|Stream]) 
+when 
+	(InitialFlag >= ?BIN_LOW) andalso 
+	(InitialFlag =< ?BIN_HIG) ->
+		Factor = InitialFlag - ?BIN_LOW,
+
+		unframe_bin(Stream, Factor).
+%------------------------------------------------------------------------------
+unframe_bin([Byte|Stream], AccLength) 
+when
+	(Byte >= ?BIN_LOW) andalso 
+	(Byte =< ?BIN_HIG) ->
+		Factor = Byte - ?BIN_LOW,
+		Length = (AccLength * 128) + Factor,
+
+		unframe_bin(Stream, Length);
+unframe_bin([EndFlag|Stream], Length) 
+when 
+	EndFlag < ?BIN_LOW andalso
+	EndFlag >= 16#00 ->
+
+		discard_payload(Stream, Length).
+%------------------------------------------------------------------------------
+discard_payload(Stream, 0) ->
+	?UNFRAME_SUCESS(?FRAME_BIN([]), Stream);
+discard_payload([H|T], Len) ->
+	discard_payload(T, Len-1).
 %------------------------------------------------------------------------------
