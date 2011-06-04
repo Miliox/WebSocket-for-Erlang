@@ -19,8 +19,9 @@
 %------------------------------------------------------------------------------
 -define(DEFAULT_PORT, 80).
 -define(DEFAULT_SECP, 443).
+-define(DEFAULT_PATH, "/").
 %------------------------------------------------------------------------------
-parse(Url) ->
+parse(Url) when is_list(Url) ->
 	case re:run(Url, ?RE_WS_URL1, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port, Path]} ->
 			Host = Domain++":"++Port,
@@ -30,7 +31,9 @@ parse(Url) ->
 			{secure, Domain, Host, list_to_integer(Port), Path};
 		nomatch ->
 			parse_1(Url)
-	end.
+	end;
+parse(_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
 parse_1(Url) ->
 	case re:run(Url, ?RE_WS_URL2, ?RE_WS_OPT) of
@@ -40,6 +43,30 @@ parse_1(Url) ->
 		{match, ["wss", Domain, Path]} ->
 			Host=Domain,
 			{secure, Domain, Host, ?DEFAULT_SECP, Path};
+		nomatch ->
+			parse_2(Url)
+	end.
+%------------------------------------------------------------------------------
+parse_2(Url) ->
+	case re:run(Url, ?RE_WS_URL3, ?RE_WS_OPT) of
+		{match, ["ws", Domain, Port]} ->
+			Host = Domain++":"++Port,
+			{normal, Domain, Host, list_to_integer(Port), ?DEFAULT_PATH};
+		{match, ["wss", Domain, Port]} ->
+			Host = Domain++":"++Port,
+			{secure, Domain, Host, list_to_integer(Port), ?DEFAULT_PATH};
+		nomatch ->
+			parse_3(Url)
+	end.
+%------------------------------------------------------------------------------
+parse_3(Url) ->
+	case re:run(Url, ?RE_WS_URL4, ?RE_WS_OPT) of
+		{match, ["ws", Domain]} ->
+			Host=Domain,
+			{normal, Domain, Host, ?DEFAULT_PORT, ?DEFAULT_PATH};
+		{match, ["wss", Domain]} ->
+			Host=Domain,
+			{secure, Domain, Host, ?DEFAULT_SECP, ?DEFAULT_PATH};
 		nomatch ->
 			error
 	end.
