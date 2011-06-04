@@ -10,7 +10,7 @@
 
 -module(ws_url).
 -author("elmiliox@gmail.com").
--vsn(1).
+-vsn(2).
 %------------------------------------------------------------------------------
 -import(re).
 -export([scheme/1, parse/1, to_string/1]).
@@ -21,6 +21,7 @@
 -define(DEFAULT_SECP, 443).
 -define(DEFAULT_PATH, "/").
 %------------------------------------------------------------------------------
+% Full Url
 parse(Url) when is_list(Url) ->
 	case re:run(Url, ?RE_WS_URL1, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port, Path]} ->
@@ -35,6 +36,7 @@ parse(Url) when is_list(Url) ->
 parse(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
+% Url without Port
 parse_1(Url) ->
 	case re:run(Url, ?RE_WS_URL2, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Path]} ->
@@ -47,6 +49,7 @@ parse_1(Url) ->
 			parse_2(Url)
 	end.
 %------------------------------------------------------------------------------
+% Url without Path
 parse_2(Url) ->
 	case re:run(Url, ?RE_WS_URL3, ?RE_WS_OPT) of
 		{match, ["ws", Domain, Port]} ->
@@ -59,6 +62,7 @@ parse_2(Url) ->
 			parse_3(Url)
 	end.
 %------------------------------------------------------------------------------
+% Url without Port and Path
 parse_3(Url) ->
 	case re:run(Url, ?RE_WS_URL4, ?RE_WS_OPT) of
 		{match, ["ws", Domain]} ->
@@ -71,14 +75,9 @@ parse_3(Url) ->
 			error
 	end.
 %------------------------------------------------------------------------------
-to_string({normal, Domain, ?DEFAULT_PORT, Path}) ->
-	"ws://" ++ Domain ++ Path;
-to_string({normal, Domain, Port, Path}) ->
-	"ws://" ++ Domain ++ ":" ++ integer_to_list(Port) ++ Path;
-to_string({secure, Domain, ?DEFAULT_SECP, Path}) ->
-	"wss://" ++ Domain ++ Path;
-to_string({secure, Domain, Port, Path}) ->
-	"ws://" ++ Domain ++ ":" ++ integer_to_list(Port) ++ Path;
+to_string({Mode, _Domain, Host, _Port, Path}) ->
+	Scheme = scheme(Mode),
+	Scheme ++ "://" ++ Host ++ Path;
 to_string(_) ->
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
