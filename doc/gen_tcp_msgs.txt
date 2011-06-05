@@ -1,0 +1,48 @@
+TCP Active Messages:
+
+Receive Packet:  {tcp,        Socket, Data}
+TCPSocket Error: {tcp_error,  Socket, Reason}
+TCPSocket Close: {tcp_closed, Socket}
+
+TCP Options:
+list    : receive packets as list
+binary  : receive packets as binary
+{ip, ip_address} : choice witch of multiples network interfaces to use
+{port, Port}     : which local port to use
+{fd, int()}      : Socket connect without use of gen_tcp
+inet6 : to use socket IPv6
+inet  : to use socket IPv4
+
+Inet Opts:
+{active, true|false|once} : permit receive income packet as messages
+	true : all packets as messages but has no flow control
+	false: all packet are receive only by calling recv
+	once:  receive a packet as message only one time
+
+{delay_send, Boolean} : Group packet in one large packet by delay send packets
+
+{exit_on_close, Boolean} : Close the Socket process handler immediatly after 
+	the Socket closed
+
+{header, Size} : Only works if the packet as set binary, this mode return the first
+	Size byte as a list and the Rest as binary
+
+{keepalive, Boolean} : Verify if the Socket is alive regulary
+
+{nodelay, Boolean} : all data is send immediately
+
+{packet, PacketType} : Format the Data as defined, if 0 ou raw is set, nothing ocurrs
+
+{packet_size, Integer} : Set the max size of a packet, discard large packets
+
+{recbuf, Integer} : return the size of receive buffer
+
+{reuseaddr, Boolean} : Reuse local used port
+
+{send_timeout, Integer|infinty} : Define the max wait for a send packet
+
+{send_timeout_close, Boolean} : set if the max timeout ocurrs if the socket has to be close
+
+{sndbuf, Integer} : Size of the send buffer
+
+{priority, Integer} : set the SO_Priority socket level (doesn't, because is not implemented)

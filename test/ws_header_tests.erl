@@ -126,7 +126,7 @@ find_test() ->
 		?assertEqual({found, "server.example.com"}, Find(?HYBI_HOST,       HB7Q) ),
 		?assertEqual({found, "http://example.com"}, Find(?HYBI_ORIGIN,     HB7Q) ),
 		?assertEqual({found, "chat, superchat"},    Find(?HYBI_PROTOCOL,   HB7Q) ),
-		?assertEqual({found, "dGhlIHNbXBsZSBub25jZQ=="}, Find(?HYBI_KEY,   HB7Q) ),
+		?assertEqual({found, "dGhlIHNhbXBsZSBub25jZQ=="}, Find(?HYBI_KEY,   HB7Q) ),
 		?assertEqual({found, "7"}, Find(?HYBI_VERSION, HB7Q) ),
 		?assertEqual({found, []},  Find(undefined,     HB7Q) ),
 
@@ -241,7 +241,7 @@ hb07_req() ->
 	"Host: server.example.com\r\n" ++
 	"Upgrade: websocket\r\n" ++
 	"Connection: Upgrade\r\n" ++
-	"Sec-WebSocket-Key: dGhlIHNbXBsZSBub25jZQ==\r\n" ++
+	"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" ++
 	"Sec-WebSocket-Origin: http://example.com\r\n" ++
 	"Sec-WebSocket-Protocol: chat, superchat\r\n" ++
 	"Sec-WebSocket-Version: 7\r\n" ++ 
@@ -313,7 +313,7 @@ hb07_req_fmt() ->
 		{"Host", "server.example.com"},
 		{"Upgrade", "websocket"}, 
 		{"Connection", "Upgrade"}, 
-		{"Sec-WebSocket-Key", "dGhlIHNbXBsZSBub25jZQ=="},
+		{"Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ=="},
 		{"Sec-WebSocket-Origin", "http://example.com"},
 		{"Sec-WebSocket-Protocol", "chat, superchat"},
 		{"Sec-WebSocket-Version", "7"}, 

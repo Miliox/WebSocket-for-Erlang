@@ -18,46 +18,46 @@
 -export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
-connect(Url) ->
+connect(_Url) ->
 	?TODO.
-connect(Url, Options) ->
+connect(_Url, _Options) ->
 	?TODO.
 
 %% Cria um WebSocket a ser usado pelo Servidor
-listen(Port, Options) ->
+listen(_Port, _Options) ->
 	?TODO.
 %------------------------------------------------------------------------------
 %% Efetua o HandShake e estabelece uma Conexao WebSocket
-accept(ListenWebSocket) ->
+accept(_ListenWebSocket) ->
 	?TODO.
-accept(ListenWebSocket, HandShakeOptions) ->
-	accept(ListenWebSocket, HandShakeOptions, infinity).
-accept(ListenWebSocket, HandShakeOptions, Timeout) ->
+accept(_ListenWebSocket, _HandShakeOptions) ->
+	accept(_ListenWebSocket, _HandShakeOptions, infinity).
+accept(_ListenWebSocket, _HandShakeOptions, _Timeout) ->
 	?TODO.
 
 %% Recebe uma mensagem transmitida via WebSocket
-recv(WebSocket) ->
-	recv(WebSocket, infinity).
-recv(WebSocket, Timeout) ->
+recv(_WebSocket) ->
+	recv(_WebSocket, infinity).
+recv(_WebSocket, Timeout) ->
 	?TODO.
 
 %% Envia uma mensagem via WebSocket
-send(WebSocket, {Type, Data}) ->
+send(_WebSocket, {_Type, _Data}) ->
 	?TODO.
 
 %% Encerra uma conexao WebSocket
-close(WebSocket) ->
+close(_WebSocket) ->
 	?TODO.
 %------------------------------------------------------------------------------
 %% Obtem a Url utilizada para estabelecer a Conexao WebSocket
-geturl(WebSocket) ->
+geturl(_WebSocket) ->
 	?TODO.
 
 %% Obtem o Subprotocolo definido durante o HandShake
-getsubprotocol(WebSocket) ->
+getsubprotocol(_WebSocket) ->
 	?TODO.
 
 %% Obtem o estado atual do WebSocket
-getstate(WebSocket) ->
+getstate(_WebSocket) ->
 	?TODO.
 %------------------------------------------------------------------------------

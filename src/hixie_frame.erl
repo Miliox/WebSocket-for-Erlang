@@ -101,6 +101,6 @@ when
 %------------------------------------------------------------------------------
 discard_payload(Stream, 0) ->
 	?UNFRAME_SUCESS(?FRAME_BIN([]), Stream);
-discard_payload([H|T], Len) ->
+discard_payload([_|T], Len) ->
 	discard_payload(T, Len-1).
 %------------------------------------------------------------------------------
