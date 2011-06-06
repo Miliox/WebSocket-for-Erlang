@@ -17,6 +17,7 @@
 %------------------------------------------------------------------------------
 -include("data_size.hrl").
 -include("ws_protocol_header.hrl").
+-include("ws_re_subprotocol.hrl").
 %------------------------------------------------------------------------------
 -import(base64).
 -import(crypto).
@@ -82,4 +83,45 @@ gen_request_2(Request, Solution) ->
 			{undefined, []} ],
 
 	{FullRequest, Solution}.
+%------------------------------------------------------------------------------
+gen_response(Request) ->
+	case catch(gen_response_1(Request)) of
+		Response when is_list(Response) ->
+			Response;
+		_ ->
+			{error, invalid_request}
+	end.
+%------------------------------------------------------------------------------
+gen_response_1(Request) ->
+	{found, _} = ws_header:find(?HYBI_URI, Request),
+	{found, _} = ws_header:find(?HYBI_HOST, Request),
+	{found, _} = ws_header:find(?HYBI_ORIGIN, Request),
+	
+	Response = [
+		{?HYBI_STATUS_CODE, "101"},
+		{?HYBI_REASON_PHRASE, ?HYBI_REASON_VAL},
+		{?HYBI_UPGRADE,    ?HYBI_UPG_VAL},
+		{?HYBI_CONNECTION, ?HYBI_CON_VAL}
+	],
+
+	gen_response_2(Response, Request).
+%------------------------------------------------------------------------------
+gen_response_2(Response, Request) ->
+	Accept = resolve_trial(Request),
+	
+	gen_response_3(Response ++ [{?HYBI_ACCEPT, Accept}], Request).
+%------------------------------------------------------------------------------
+gen_response_3(ResponsePartial, Request) ->
+	Response = case ws_header:find(?HYBI_PROTOCOL, Request) of
+		{found, ProtocolList} ->
+			Protocol = 
+				lists:nth(1, re:split( ProtocolList, 
+						?RE_PROT_SEP, ?RE_PROT_OPT)),
+			ResponsePartial ++ [{?HYBI_PROTOCOL, Protocol}];
+		notfound ->
+			ResponsePartial
+	end,
+	Response ++ [
+		{undefined, []}, 
+		{undefined, []} ].
 %------------------------------------------------------------------------------

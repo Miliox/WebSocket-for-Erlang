@@ -12,8 +12,9 @@
 -author("elmiliox@gmail.com").
 -vsn(1).
 
--include("ws_protocol_header.hrl").
 -include("data_size.hrl").
+-include("ws_protocol_header.hrl").
+-include("ws_re_subprotocol.hrl").
 %------------------------------------------------------------------------------
 -import(erlang).
 -import(lists).
@@ -97,7 +98,10 @@ gen_response_1(Request) ->
 %------------------------------------------------------------------------------
 gen_response_2(Response, Request) ->
 	case ws_header:find(?HIXIE76_PROTOCOL, Request) of
-		{found, Protocol} ->
+		{found, ProtocolList} ->
+			Protocol = 
+				lists:nth(1, re:split( ProtocolList, 
+						?RE_PROT_SEP, ?RE_PROT_OPT)),
 			gen_response_3( Response ++ 
 				[{?HIXIE76_PROTOCOL, Protocol}], Request);
 		notfound ->
