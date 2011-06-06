@@ -38,7 +38,7 @@ accept(_ListenWebSocket, _HandShakeOptions, _Timeout) ->
 %% Recebe uma mensagem transmitida via WebSocket
 recv(_WebSocket) ->
 	recv(_WebSocket, infinity).
-recv(_WebSocket, Timeout) ->
+recv(_WebSocket, _Timeout) ->
 	?TODO.
 
 %% Envia uma mensagem via WebSocket

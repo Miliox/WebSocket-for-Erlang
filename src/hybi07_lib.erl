@@ -23,6 +23,7 @@
 -import(ws_header).
 %------------------------------------------------------------------------------
 -export([make_trial/0, resolve_trial/1, random_key/0]).
+-export([gen_request/2, gen_request/3]).
 %------------------------------------------------------------------------------
 resolve_trial(Request) when is_list(Request) ->
 	{found, Key} = ws_header:find(?HYBI_KEY, Request),
@@ -44,4 +45,41 @@ random_key_1(DecodeKey, 0) ->
 random_key_1(DecodeKey, Len) ->
 	Char = random:uniform(?BYTE),
 	random_key_1([Char|DecodeKey], Len-1).
+%------------------------------------------------------------------------------
+gen_request(Url, FromUrl) ->
+	gen_request(Url, FromUrl, []).
+%------------------------------------------------------------------------------
+gen_request(Url, FromUrl, SubProtocol) ->
+	{_, _, Host, _, Uri} = ws_url:parse(Url),
+	{Key, Solution} = make_trial(),
+	Origin = FromUrl,
+
+	Request = [
+		{?HYBI_METHOD, ?HYBI_MET_VAL},
+		{?HYBI_URI,  Uri},
+		{?HYBI_HOST, Host},
+		{?HYBI_UPGRADE,    ?HYBI_UPG_VAL},
+		{?HYBI_CONNECTION, ?HYBI_CON_VAL},
+		{?HYBI_KEY,    Key},
+		{?HYBI_ORIGIN, Origin}],
+
+	gen_request_1(Request, SubProtocol, Solution).
+%------------------------------------------------------------------------------
+gen_request_1(Request, SubProtocol, Solution) ->
+	case  string:join(SubProtocol, ", ") of
+		[] ->
+			gen_request_2(Request, Solution);
+		ProtField ->
+			gen_request_2(Request ++ 
+				[{?HYBI_PROTOCOL, ProtField}], Solution)
+	end.
+%------------------------------------------------------------------------------
+gen_request_2(Request, Solution) ->
+	FullRequest = 
+		Request ++ [ 
+			{?HYBI_VERSION, "7"}, 
+			{undefined, []}, 
+			{undefined, []} ],
+
+	{FullRequest, Solution}.
 %------------------------------------------------------------------------------
