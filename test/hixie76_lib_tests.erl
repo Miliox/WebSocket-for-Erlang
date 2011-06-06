@@ -19,7 +19,7 @@
 gen_request_test() ->
 	Url = "ws://echo.websocket.org/test",
 	Origin = "http://www.websocket.org",
-	SubProt = ["echo"],
+	SubProt = ["echo", "superecho"],
 
 	{Request, Validate} = hixie76_lib:gen_request(Url, Origin, SubProt),
 	Response = hixie76_lib:gen_response(Request),
