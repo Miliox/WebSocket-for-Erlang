@@ -12,18 +12,36 @@
 -author("elmiliox@gmail.com").
 -vsn(1).
 %------------------------------------------------------------------------------
+-define(DECODE_KEY_LEN, 16).
 -define(GUID, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").
 %------------------------------------------------------------------------------
+-include("data_size.hrl").
 -include("ws_protocol_header.hrl").
 %------------------------------------------------------------------------------
 -import(base64).
 -import(crypto).
 -import(ws_header).
 %------------------------------------------------------------------------------
--export([resolve_trial/1]).
+-export([make_trial/0, resolve_trial/1, random_key/0]).
 %------------------------------------------------------------------------------
 resolve_trial(Request) when is_list(Request) ->
 	{found, Key} = ws_header:find(?HYBI_KEY, Request),
-	
+	resolve_trial_from_key(Key).
+%------------------------------------------------------------------------------
+resolve_trial_from_key(Key) ->
 	binary_to_list( base64:encode( crypto:sha(Key ++ ?GUID) ) ).
+%------------------------------------------------------------------------------
+make_trial() ->
+	Key = random_key(),
+	Answer = resolve_trial_from_key(Key),
+	{Key, Answer}.
+%------------------------------------------------------------------------------
+random_key() ->
+	random_key_1([], ?DECODE_KEY_LEN).
+%------------------------------------------------------------------------------
+random_key_1(DecodeKey, 0) ->
+	binary_to_list(base64:encode(DecodeKey));
+random_key_1(DecodeKey, Len) ->
+	Char = random:uniform(?BYTE),
+	random_key_1([Char|DecodeKey], Len-1).
 %------------------------------------------------------------------------------

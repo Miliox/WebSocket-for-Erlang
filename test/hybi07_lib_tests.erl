@@ -20,3 +20,11 @@ resolve_trial_test() ->
 	Answer = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
 	
 	[?assertEqual(Answer, hybi07_lib:resolve_trial(Request))].
+%------------------------------------------------------------------------------
+make_trial_test() ->
+	{K, A} = hybi07_lib:make_trial(),
+	[
+		?assertEqual(16, size(base64:decode(K) ) ),
+		?assertEqual(A, hybi07_lib:resolve_trial_from_key(K))
+	].
+%------------------------------------------------------------------------------
