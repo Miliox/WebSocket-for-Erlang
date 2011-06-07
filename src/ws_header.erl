@@ -10,15 +10,19 @@
 
 -module(ws_header).
 -author("elmiliox@gmail.com").
--vsn(2).
-
+-vsn(3).
+%------------------------------------------------------------------------------
 -export([parse/1, type/1, find/2, to_string/1]).
+%------------------------------------------------------------------------------
 -include("ws_protocol_header.hrl").
 -include("ws_re_header.hrl").
-
+%------------------------------------------------------------------------------
 -define(DEFINED_HEADER(Draft, Type), {ok, {Draft, Type}}).
 -define(ERROR_HEADER, {error, invalid_header}).
-
+%------------------------------------------------------------------------------
+-define(SPACE, $ ).
+-define(COLON, $:).
+-define(SEPARATOR(Field), [?COLON|[?SPACE|Field]]).
 %------------------------------------------------------------------------------
 % HTTP Header -> [{Key, Value}, ...]
 parse(Header) when is_binary(Header) ->
@@ -59,12 +63,16 @@ map_field(Lines) ->
 	].
 %------------------------------------------------------------------------------
 line_to_field(Line) ->
-	case re:run(Line, ?RE_FIELD, ?RE_FIELD_OPT) of
-		{match, [Name, Value]} ->
-			field(Name, Value);
-		nomatch ->
-			field(undefined, Line)
-	end.
+	line_to_field(Line, []).
+%------------------------------------------------------------------------------
+line_to_field([], ReverseLine) ->
+	Line = lists:reverse(ReverseLine),
+	{undefined, Line};
+line_to_field(?SEPARATOR(Field), ReverseName) ->
+	Name = lists:reverse(ReverseName),
+	{Name, Field};
+line_to_field([Char|TailLine], ReverseName) ->
+	line_to_field(TailLine, [Char|ReverseName]).
 %------------------------------------------------------------------------------
 field(K, V) -> {K, V}.
 %------------------------------------------------------------------------------
