@@ -12,14 +12,16 @@
 -author("elmiliox@gmail.com").
 -vsn(3).
 %------------------------------------------------------------------------------
--export([parse/1, type/1, find/2, to_string/1]).
+-export([parse/1, type/1, find/2, to_string/1, resolve_subprotocol/1]).
 %------------------------------------------------------------------------------
 -include("ws_protocol_header.hrl").
 -include("ws_re_header.hrl").
+-include("ws_re_subprotocol.hrl").
 %------------------------------------------------------------------------------
 -define(DEFINED_HEADER(Draft, Type), {ok, {Draft, Type}}).
 -define(ERROR_HEADER, {error, invalid_header}).
 %------------------------------------------------------------------------------
+-define(FIRST, 1).
 -define(SPACE, $ ).
 -define(COLON, $:).
 -define(SEPARATOR(Field), [?COLON|[?SPACE|Field]]).
@@ -43,7 +45,8 @@ break_lines(Header) ->
 parse_start_line(L) ->
 	case re:run(L, ?RE_REQ, ?RE_REQ_OPT) of 
 		{match, [Method, Path]} ->
-			[field(?WS_METHOD, Method), field(?WS_URI, Path)];
+			[field(?WS_METHOD, Method),
+			 field(?WS_URI, Path)];
 		nomatch ->
 			parse_start_line_1(L)
 	end.
@@ -51,7 +54,8 @@ parse_start_line(L) ->
 parse_start_line_1(L) ->
 	case re:run(L, ?RE_RES, ?RE_RES_OPT) of 
 		{match, [Status, Reason]} ->
-			[field(?WS_STATUS_CODE, Status), field(?WS_REASON_PHRASE, Reason)];
+			[field(?WS_STATUS_CODE, Status),
+			 field(?WS_REASON_PHRASE, Reason)];
 		nomatch ->
 			[field(undefined, L)]
 	end.
@@ -67,10 +71,10 @@ line_to_field(Line) ->
 %------------------------------------------------------------------------------
 line_to_field([], ReverseLine) ->
 	Line = lists:reverse(ReverseLine),
-	{undefined, Line};
-line_to_field(?SEPARATOR(Field), ReverseName) ->
+	field(undefined, Line);
+line_to_field(?SEPARATOR(Value), ReverseName) ->
 	Name = lists:reverse(ReverseName),
-	{Name, Field};
+	field(Name, Value);
 line_to_field([Char|TailLine], ReverseName) ->
 	line_to_field(TailLine, [Char|ReverseName]).
 %------------------------------------------------------------------------------
@@ -238,3 +242,8 @@ to_string_field(Field) ->
 			ignore
 	end.
 %------------------------------------------------------------------------------
+resolve_subprotocol(ProtocolList) ->
+	lists:nth(?FIRST,
+		re:split(ProtocolList, ?RE_PROT_SEP, ?RE_PROT_OPT)).
+%------------------------------------------------------------------------------
+

@@ -17,7 +17,6 @@
 %------------------------------------------------------------------------------
 -include("data_size.hrl").
 -include("ws_protocol_header.hrl").
--include("ws_re_subprotocol.hrl").
 %------------------------------------------------------------------------------
 -import(base64).
 -import(crypto).
@@ -113,15 +112,14 @@ gen_response_2(Response, Request) ->
 %------------------------------------------------------------------------------
 gen_response_3(ResponsePartial, Request) ->
 	Response = case ws_header:find(?HYBI_PROTOCOL, Request) of
-		{found, ProtocolList} ->
-			Protocol = 
-				lists:nth(1, re:split( ProtocolList, 
-						?RE_PROT_SEP, ?RE_PROT_OPT)),
-			ResponsePartial ++ [{?HYBI_PROTOCOL, Protocol}];
+		{found, SubProtocolList} ->
+			SubProtocol = 
+				ws_header:resolve_subprotocol(SubProtocolList),
+			ResponsePartial ++ [{?HYBI_PROTOCOL, SubProtocol}];
 		notfound ->
 			ResponsePartial
 	end,
 	Response ++ [
 		{undefined, []}, 
-		{undefined, []} ].
+		{undefined, []}].
 %------------------------------------------------------------------------------

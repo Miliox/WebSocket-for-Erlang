@@ -100,8 +100,7 @@ gen_response_2(Response, Request) ->
 	case ws_header:find(?HIXIE76_PROTOCOL, Request) of
 		{found, ProtocolList} ->
 			Protocol = 
-				lists:nth(1, re:split( ProtocolList, 
-						?RE_PROT_SEP, ?RE_PROT_OPT)),
+				ws_header:resolve_subprotocol(ProtocolList),
 			gen_response_3( Response ++ 
 				[{?HIXIE76_PROTOCOL, Protocol}], Request);
 		notfound ->
