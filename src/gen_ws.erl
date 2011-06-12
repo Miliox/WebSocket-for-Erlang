@@ -13,12 +13,14 @@
 %------------------------------------------------------------------------------
 -define(LOCALHOST, "127.0.0.1").
 -define(TCP_OPT, [list, {packet, raw}, {active, false}]).
--define(REPLY_ERROR, {error, invalid_response}).
--define(SOLUTION_LEN, 16).
+%------------------------------------------------------------------------------
 -define(CR, [$\r]).
 -define(LF, [$\n]).
+-define(SOLUTION_LEN, 16).
+%------------------------------------------------------------------------------
 -define(print(Text), io:format("~p~n", [Text])).
 -define(TODO, {error, todo}).
+-define(REPLY_ERROR, {error, invalid_response}).
 %------------------------------------------------------------------------------
 -import(gen_tcp).
 -import(hixie76_lib).
@@ -36,13 +38,13 @@ connect(Url, Origin) ->
 connect(Url, Origin, Options) ->
 	connect(Url, Origin, Options, infinity).
 connect(Url, Origin, Options, Timeout) ->
-	{normal, Address, _, Port, _} = ws_url:parse(Url),
+	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 
-	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
-		{ok, TCPSocket} ->
-			make_handshake(Url, Origin, TCPSocket);
-		Error ->
-			Error
+	case Mode of
+		normal -> normal_connect(
+				Url, Origin, Address, Port, Options, Timeout);
+		_Other ->
+			{error, notsupport}
 	end.
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
@@ -84,6 +86,14 @@ getstate(_WebSocket) ->
 	?TODO.
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
+normal_connect(Url, Origin, Address, Port, Options, Timeout) ->
+	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
+		{ok, TCPSocket} ->
+			make_handshake(Url, Origin, TCPSocket);
+		Error ->
+			Error
+	end.
+%------------------------------------------------------------------------------
 make_handshake(Url, Origin, TCPSocket) ->
 	{ReqList, Answer} = hixie76_lib:gen_request(Url, Origin),
 	RequestHeader = ws_header:to_string(ReqList),
@@ -98,6 +108,8 @@ receive_response(TCPSocket, Answer) ->
 	case catch(receive_response_1(TCPSocket, Answer)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
 			Error;
+		{'EXIT', {Reason, _}} ->
+			{error, Reason};
 		Sucess ->
 			Sucess
 	end.
