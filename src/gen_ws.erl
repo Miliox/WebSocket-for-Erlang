@@ -9,20 +9,42 @@
 
 -module(gen_ws).
 -author("elmiliox@gmail.com").
--vsn(1).
-
+-vsn(2).
+%------------------------------------------------------------------------------
+-define(LOCALHOST, "127.0.0.1").
+-define(TCP_OPT, [list, {packet, raw}, {active, false}]).
+-define(REPLY_ERROR, {error, invalid_response}).
+-define(SOLUTION_LEN, 16).
+-define(CR, [$\r]).
+-define(LF, [$\n]).
+-define(print(Text), io:format("~p~n", [Text])).
 -define(TODO, {error, todo}).
-
+%------------------------------------------------------------------------------
+-import(gen_tcp).
+-import(hixie76_lib).
+-import(ws_url).
+%------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
 -export([accept/1, accept/2, accept/3, recv/1, recv/2, send/2, close/1]).
 -export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
-connect(_Url) ->
-	?TODO.
-connect(_Url, _Options) ->
-	?TODO.
+connect(Url) ->
+	connect(Url, ?LOCALHOST).
+connect(Url, Origin) ->
+	connect(Url, Origin, []).
+connect(Url, Origin, Options) ->
+	connect(Url, Origin, Options, infinity).
+connect(Url, Origin, Options, Timeout) ->
+	{normal, Address, _, Port, _} = ws_url:parse(Url),
 
+	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
+		{ok, TCPSocket} ->
+			make_handshake(Url, Origin, TCPSocket);
+		Error ->
+			Error
+	end.
+%------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(_Port, _Options) ->
 	?TODO.
@@ -34,17 +56,17 @@ accept(_ListenWebSocket, _HandShakeOptions) ->
 	accept(_ListenWebSocket, _HandShakeOptions, infinity).
 accept(_ListenWebSocket, _HandShakeOptions, _Timeout) ->
 	?TODO.
-
+%------------------------------------------------------------------------------
 %% Recebe uma mensagem transmitida via WebSocket
 recv(_WebSocket) ->
 	recv(_WebSocket, infinity).
 recv(_WebSocket, _Timeout) ->
 	?TODO.
-
+%------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
 send(_WebSocket, {_Type, _Data}) ->
 	?TODO.
-
+%------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
 close(_WebSocket) ->
 	?TODO.
@@ -52,12 +74,104 @@ close(_WebSocket) ->
 %% Obtem a Url utilizada para estabelecer a Conexao WebSocket
 geturl(_WebSocket) ->
 	?TODO.
-
+%------------------------------------------------------------------------------
 %% Obtem o Subprotocolo definido durante o HandShake
 getsubprotocol(_WebSocket) ->
 	?TODO.
-
+%------------------------------------------------------------------------------
 %% Obtem o estado atual do WebSocket
 getstate(_WebSocket) ->
 	?TODO.
 %------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+make_handshake(Url, Origin, TCPSocket) ->
+	{ReqList, Answer} = hixie76_lib:gen_request(Url, Origin),
+	RequestHeader = ws_header:to_string(ReqList),
+	case gen_tcp:send(TCPSocket, RequestHeader) of
+		ok ->
+			receive_response(TCPSocket, Answer);
+		Error ->
+			Error
+	end.
+%------------------------------------------------------------------------------
+receive_response(TCPSocket, Answer) ->
+	case catch(receive_response_1(TCPSocket, Answer)) of
+		{'EXIT', {{case_clause, Error}, _}} ->
+			Error;
+		Sucess ->
+			Sucess
+	end.
+%------------------------------------------------------------------------------
+receive_response_1(TCPSocket, Answer) ->
+	ResponseHeader = receive_response_header(TCPSocket),
+	ServerSolution = receive_response_solution(TCPSocket),
+
+	?print(ResponseHeader),
+	?print(ServerSolution),
+
+	case ServerSolution == Answer of
+		true ->
+			create_websocket_handler(TCPSocket);
+		false ->
+			?REPLY_ERROR
+	end.	
+%------------------------------------------------------------------------------
+receive_response_header(TCPSocket) ->
+	receive_response_header_loop(TCPSocket, []).
+%------------------------------------------------------------------------------
+% Header Loop Termina quanto encontrar CRLFCRLF
+receive_response_header_loop(TCPSocket, RevBuffer) ->
+	case gen_tcp:recv(TCPSocket, 1) of
+		{ok, ?CR} ->
+			receive_response_header_loop_1(
+				TCPSocket, ?CR ++ RevBuffer);
+		{ok, Char} ->
+			receive_response_header_loop(
+				TCPSocket, Char ++ RevBuffer)
+	end.
+%------------------------------------------------------------------------------
+% Falta LFCRLF
+receive_response_header_loop_1(TCPSocket, RevBuffer) ->
+	case gen_tcp:recv(TCPSocket, 1) of
+		{ok, ?LF} ->
+			receive_response_header_loop_2(
+				TCPSocket, ?LF ++ RevBuffer);
+		{ok, Char} ->
+			receive_response_header_loop(
+				TCPSocket, Char ++ RevBuffer)
+	end.
+%------------------------------------------------------------------------------
+% Falta CRLF
+receive_response_header_loop_2(TCPSocket, RevBuffer) ->
+	case gen_tcp:recv(TCPSocket, 1) of
+		{ok, ?CR} ->
+			receive_response_header_loop_3(
+				TCPSocket, ?CR ++ RevBuffer);
+		{ok, Char} ->
+			receive_response_header_loop(
+				TCPSocket, Char ++ RevBuffer)
+	end.
+%------------------------------------------------------------------------------
+% Falta LF
+receive_response_header_loop_3(TCPSocket, RevBuffer) ->
+	case gen_tcp:recv(TCPSocket, 1) of
+		{ok, ?LF} ->
+			lists:reverse(?LF ++ RevBuffer);
+		{ok, Char} ->
+			receive_response_header_loop(
+				TCPSocket, Char ++ RevBuffer)
+	end.
+%------------------------------------------------------------------------------
+receive_response_solution(TCPSocket) ->
+	receive_response_solution(TCPSocket, ?SOLUTION_LEN, []).
+%------------------------------------------------------------------------------
+receive_response_solution(_, Len, RevBuffer) when Len =< 0 ->
+	lists:reverse(RevBuffer);
+receive_response_solution(TCPSocket, Len, RevBuffer) ->
+	case gen_tcp:recv(TCPSocket, 1) of
+		{ok, Byte} -> receive_response_solution(
+				TCPSocket, Len-1, Byte ++ RevBuffer)
+	end.
+%------------------------------------------------------------------------------
+create_websocket_handler(TCPSocket) ->
+	{ok, TCPSocket}.
