@@ -14,6 +14,9 @@
 -define(LOCALHOST, "127.0.0.1").
 -define(TCP_OPT, [list, {packet, raw}, {active, false}]).
 %------------------------------------------------------------------------------
+-define(ALL, 0).
+-define(ONLY_ONE, 1).
+%------------------------------------------------------------------------------
 -define(CR, [$\r]).
 -define(LF, [$\n]).
 -define(SOLUTION_LEN, 16).
@@ -133,7 +136,7 @@ receive_response_header(TCPSocket) ->
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_response_header_loop(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, 1) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
 		{ok, ?CR} ->
 			receive_response_header_loop_1(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -144,7 +147,7 @@ receive_response_header_loop(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LFCRLF
 receive_response_header_loop_1(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, 1) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
 		{ok, ?LF} ->
 			receive_response_header_loop_2(
 				TCPSocket, ?LF ++ RevBuffer);
@@ -155,7 +158,7 @@ receive_response_header_loop_1(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta CRLF
 receive_response_header_loop_2(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, 1) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
 		{ok, ?CR} ->
 			receive_response_header_loop_3(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -166,7 +169,7 @@ receive_response_header_loop_2(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LF
 receive_response_header_loop_3(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, 1) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
 		{ok, ?LF} ->
 			lists:reverse(?LF ++ RevBuffer);
 		{ok, Char} ->
@@ -186,4 +189,28 @@ receive_response_solution(TCPSocket, Len, RevBuffer) ->
 	end.
 %------------------------------------------------------------------------------
 create_websocket_handler(TCPSocket) ->
+	HandlerPid = spawn(?MODULE, main_loop, [TCPSocket, self(), queue:new()]),
+	ReceivePid = spawn(?MODULE, recv_loop, [TCPSocket, HandlerPid, []]),
+
+	gen_tcp:controlling_process(TCPSocket, HandlerPid),
 	{ok, TCPSocket}.
+
+%------------------------------------------------------------------------------
+main_loop(TCPSocket, Owner, MsgBox) ->
+	receive
+		{income, Frame} ->
+			main_loop(TCPSocket, Owner, queue:in(Frame, MsgBox));
+		{recv, RecvPid} ->
+			MsgBox2 = handle_rcv(RecvPid, MsgBox),
+			main_loop(TCPSocket, Owner, queue:in(Frame, MsgBox2));
+
+	end.
+%------------------------------------------------------------------------------
+recv_loop(TCPSocket, Handler, Buffer) ->
+	case gen_tcp:recv(TCPSocket, ?ALL) ->
+		{tcp, TCPSocket, Stream} ->
+			{_, Content, _} = hixie_frame:unframe(Frame),
+			Handler ! {income, Content},
+			recv_loop()
+
+	end.
