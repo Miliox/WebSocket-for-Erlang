@@ -11,19 +11,7 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 %------------------------------------------------------------------------------
--define(LOCALHOST, "127.0.0.1").
--define(TCP_OPT, [list, {packet, raw}, {active, false}]).
-%------------------------------------------------------------------------------
--define(ALL, 0).
--define(ONLY_ONE, 1).
-%------------------------------------------------------------------------------
--define(CR, [$\r]).
--define(LF, [$\n]).
--define(SOLUTION_LEN, 16).
-%------------------------------------------------------------------------------
--define(print(Text), io:format("~p~n", [Text])).
--define(TODO, {error, todo}).
--define(REPLY_ERROR, {error, invalid_response}).
+-include("gen_ws.hrl").
 %------------------------------------------------------------------------------
 -import(gen_tcp).
 -import(hixie76_lib).
@@ -35,11 +23,11 @@
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
 connect(Url) ->
-	connect(Url, ?LOCALHOST).
+	connect(Url, ?DEF_ORIGIN).
 connect(Url, Origin) ->
-	connect(Url, Origin, []).
+	connect(Url, Origin, ?DEF_CON_OPT).
 connect(Url, Origin, Options) ->
-	connect(Url, Origin, Options, infinity).
+	connect(Url, Origin, Options, ?DEF_TIMEOUT).
 connect(Url, Origin, Options, Timeout) ->
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 
@@ -88,6 +76,7 @@ getsubprotocol(_WebSocket) ->
 getstate(_WebSocket) ->
 	?TODO.
 %------------------------------------------------------------------------------
+% Internal Functions
 %------------------------------------------------------------------------------
 normal_connect(Url, Origin, Address, Port, Options, Timeout) ->
 	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
@@ -192,7 +181,11 @@ create_websocket_handler(TCPSocket) ->
 	HandlerPid = spawn(?MODULE, main_loop, [TCPSocket, self(), queue:new()]),
 	ReceivePid = spawn(?MODULE, recv_loop, [TCPSocket, HandlerPid, []]),
 
+	HandlerPid ! ReceivePid,
+
 	gen_tcp:controlling_process(TCPSocket, HandlerPid),
+
+	WebSocket = HandlerPid,
 	{ok, TCPSocket}.
 
 %------------------------------------------------------------------------------
