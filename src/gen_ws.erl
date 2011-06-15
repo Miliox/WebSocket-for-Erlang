@@ -183,8 +183,8 @@ create_websocket_handler(TCPSocket, ReqList, ResList) ->
 	gen_tcp:controlling_process(TCPSocket, HandlerPid),
 
 	WebSocket = ?WS_FMT(HandlerPid),
-	{ok, WebSocket}.
 
+	{ok, WebSocket}.
 %------------------------------------------------------------------------------
 main_start(TCPSocket, Owner, RequestHeader, ResponseHeader) ->
 	put(request, RequestHeader),
@@ -198,7 +198,7 @@ main_start(TCPSocket, Owner, RequestHeader, ResponseHeader) ->
 main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 	receive
 		X ->
-			io:format("main_loop:~p~n", [X]),
+			?print("main_loop", X),
 			main_loop(TCPSocket, Owner, Receiver, MailBox)
 	end.
 %------------------------------------------------------------------------------
@@ -208,6 +208,7 @@ recv_start(TCPSocket, Handler) ->
 recv_loop(TCPSocket, Handler, Buffer) ->
 	case gen_tcp:recv(TCPSocket, ?ALL) of
 		X ->
-			io:format("rcv_loop:~p~n", [X]),
+			?print("rcv_loop", X),
 			recv_loop(TCPSocket, Handler, Buffer)
 	end.
+%------------------------------------------------------------------------------

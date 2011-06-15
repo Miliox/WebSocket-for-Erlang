@@ -22,6 +22,7 @@
 %------------------------------------------------------------------------------
 % Function Placeholder
 -define(print(Text), io:format("~p~n", [Text])).
+-define(print(Message, Text), io:format("~s:~p~n", [Message, Text])).
 %------------------------------------------------------------------------------
 % Data Placeholder
 -define(TODO, {error, todo}).
