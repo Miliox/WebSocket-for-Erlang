@@ -110,9 +110,8 @@ receive_response_1(TCPSocket, Answer,ReqList) ->
 	ResponseHeader = receive_response_header(TCPSocket),
 	ServerSolution = receive_response_solution(TCPSocket),
 
-	ResList = ws_header:parse(ResponseHeader),
+	ResList = ws_header:parse(ResponseHeader ++ ServerSolution),
 	?print(ResList),
-	?print(ServerSolution),
 
 	case ServerSolution == Answer of
 		true ->
