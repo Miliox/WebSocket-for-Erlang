@@ -91,13 +91,13 @@ make_handshake(Url, Origin, TCPSocket) ->
 	RequestHeader = ws_header:to_string(ReqList),
 	case gen_tcp:send(TCPSocket, RequestHeader) of
 		ok ->
-			receive_response(TCPSocket, Answer);
+			receive_response(TCPSocket, Answer, ReqList);
 		Error ->
 			Error
 	end.
 %------------------------------------------------------------------------------
-receive_response(TCPSocket, Answer) ->
-	case catch(receive_response_1(TCPSocket, Answer)) of
+receive_response(TCPSocket, Answer, ReqList) ->
+	case catch(receive_response_1(TCPSocket, Answer, ReqList)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
 			Error;
 		{'EXIT', {Reason, _}} ->
@@ -106,16 +106,17 @@ receive_response(TCPSocket, Answer) ->
 			Sucess
 	end.
 %------------------------------------------------------------------------------
-receive_response_1(TCPSocket, Answer) ->
+receive_response_1(TCPSocket, Answer,ReqList) ->
 	ResponseHeader = receive_response_header(TCPSocket),
 	ServerSolution = receive_response_solution(TCPSocket),
 
-	?print(ResponseHeader),
+	ResList = ws_header:parse(ResponseHeader),
+	?print(ResList),
 	?print(ServerSolution),
 
 	case ServerSolution == Answer of
 		true ->
-			create_websocket_handler(TCPSocket);
+			create_websocket_handler(TCPSocket, ReqList, ResList);
 		false ->
 			?REPLY_ERROR
 	end.	
@@ -177,33 +178,36 @@ receive_response_solution(TCPSocket, Len, RevBuffer) ->
 				TCPSocket, Len-1, Byte ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
-create_websocket_handler(TCPSocket) ->
-	HandlerPid = spawn(?MODULE, main_loop, [TCPSocket, self(), queue:new()]),
-	ReceivePid = spawn(?MODULE, recv_loop, [TCPSocket, HandlerPid, []]),
-
-	HandlerPid ! ReceivePid,
-
+create_websocket_handler(TCPSocket, ReqList, ResList) ->
+	HandlerPid = spawn(?MODULE, main_start, [TCPSocket, self(), ReqList, ResList]),
 	gen_tcp:controlling_process(TCPSocket, HandlerPid),
 
-	WebSocket = HandlerPid,
-	{ok, TCPSocket}.
+	WebSocket = ?WS_FMT(HandlerPid),
+	{ok, WebSocket}.
 
 %------------------------------------------------------------------------------
-main_loop(TCPSocket, Owner, MsgBox) ->
-	receive
-		{income, Frame} ->
-			main_loop(TCPSocket, Owner, queue:in(Frame, MsgBox));
-		{recv, RecvPid} ->
-			MsgBox2 = handle_rcv(RecvPid, MsgBox),
-			main_loop(TCPSocket, Owner, queue:in(Frame, MsgBox2));
+main_start(TCPSocket, Owner, RequestHeader, ResponseHeader) ->
+	put(request, RequestHeader),
+	put(response, ResponseHeader),
 
+	MailBox = queue:new(),
+	Receiver = spawn_link(?MODULE, recv_start, [TCPSocket, self()]),
+
+	main_loop(TCPSocket, Owner, Receiver, MailBox).
+%------------------------------------------------------------------------------
+main_loop(TCPSocket, Owner, Receiver, MailBox) ->
+	receive
+		X ->
+			io:format("main_loop:~p~n", [X]),
+			main_loop(TCPSocket, Owner, Receiver, MailBox)
 	end.
 %------------------------------------------------------------------------------
+recv_start(TCPSocket, Handler) ->
+	recv_loop(TCPSocket, Handler, []).
+%------------------------------------------------------------------------------
 recv_loop(TCPSocket, Handler, Buffer) ->
-	case gen_tcp:recv(TCPSocket, ?ALL) ->
-		{tcp, TCPSocket, Stream} ->
-			{_, Content, _} = hixie_frame:unframe(Frame),
-			Handler ! {income, Content},
-			recv_loop()
-
+	case gen_tcp:recv(TCPSocket, ?ALL) of
+		X ->
+			io:format("rcv_loop:~p~n", [X]),
+			recv_loop(TCPSocket, Handler, Buffer)
 	end.

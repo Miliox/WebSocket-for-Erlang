@@ -34,9 +34,6 @@
 -define(RECV_REQ(From, Timeout),  {From, recv, Timeout}).
 -define(RECV_REQ(Timeout),  ?RECV_REQ(self(), Timeout)).
 
--define(RECV_REQ(From, Timeout),  {From, recv, Timeout}).
--define(RECV_REQ(Timeout),  ?RECV_REQ(self(), Timeout)).
-
 -define(SEND_REQ(From, Message),  {From, send, Message}).
 -define(SEND_REQ(Message),  ?SEND_REQ(self(), Message)).
 
