@@ -60,15 +60,24 @@
 -define(CHANGE_OWNER_ERROR(From, Reason), {From, change_owner, {error, Reason}}).
 -define(CHANGE_OWNER_ERROR(Reason), ?CHANGE_OWNER_ERROR(self(), Reason)).
 
--define(WS_CLOSE_SIGNAL, {ws_closed, ?WS_FMT(self())}).
 %------------------------------------------------------------------------------
 % TCP Settings
 -define(TCP_OPT, [list, {packet, raw}, {active, false}]).
 %-----------------------------------------------------------------------------
-% TCPSocket Messages
--define(TCP_RECV(Socket, Packet),  {tcp, Socket, Packet}).
--define(TCP_ERROR(Socket, Reason), {tcp_error, Socket, Reason}).
--define(TCP_CLOSE(Socket),         {tcp_closed, Socket}).
+% TCPSocket Active Messages
+-define(TCP_RECV_SIGNAL(Socket, Packet),  {tcp, Socket, Packet}).
+-define(TCP_ERROR_SIGNAL(Socket, Reason), {tcp_error, Socket, Reason}).
+-define(TCP_CLOSE_SIGNAL(Socket),         {tcp_closed, Socket}).
+%------------------------------------------------------------------------------
+% WebSocket Active Messages
+-define(WS_RECV_SIGNAL(Frame),  {ws, ?WS_FMT(self()), Frame}).
+-define(WS_RECV_SIGNAL(WebSocket, Frame), {ws, WebSocket, Frame}).
+
+-define(WS_ERROR_SIGNAL, {ws_error, ?WS_FMT(self()), Reason}).
+-define(WS_ERROR_SIGNAL(WebSocket), {ws_error, WebSocket, Reason}).
+
+-define(WS_CLOSE_SIGNAL, {ws_closed, ?WS_FMT(self())}).
+-define(WS_CLOSE_SIGNAL(WebSocket), {ws_closed, WebSocket}).
 %------------------------------------------------------------------------------
 -define(RECV_NEW(From, Frame), {From, recv_frame, Frame}).
 -define(RECV_NEW(Frame), ?RECV_NEW(self(), Frame)).

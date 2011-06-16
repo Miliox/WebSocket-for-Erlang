@@ -245,3 +245,11 @@ location_from_request(Request) ->
 	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 
 	Scheme ++ Host ++ Uri.
+%------------------------------------------------------------------------------
+get_subprotocol(Header) ->
+	case ws_header:find(?HIXIE76_PROTOCOL, Header) of
+		{found, SubProtocol} ->
+			SubProtocol;
+		notfound ->
+			nil
+	end.

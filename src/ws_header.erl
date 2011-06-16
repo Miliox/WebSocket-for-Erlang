@@ -246,4 +246,3 @@ resolve_subprotocol(ProtocolList) ->
 	lists:nth(?FIRST,
 		re:split(ProtocolList, ?RE_PROT_SEP, ?RE_PROT_OPT)).
 %------------------------------------------------------------------------------
-

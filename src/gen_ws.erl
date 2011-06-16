@@ -23,7 +23,6 @@
 -export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
-% Ideal: connect(Url, Options)
 connect(Url) ->
 	connect(Url, ?DEF_CON_OPT).
 connect(Url, Options) ->
@@ -46,7 +45,6 @@ get_default(origin) -> ?DEF_ORIGIN;
 get_default(subprotocol) -> ?DEF_SUBP;
 get_default(timeout) -> ?DEF_TIMEOUT;
 get_default(_) -> erlang:error(badarg).
-
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(_Port, _Options) ->
@@ -63,29 +61,29 @@ accept(_ListenWebSocket, _HandShakeOptions, _Timeout) ->
 %% Recebe uma mensagem transmitida via WebSocket
 recv(WebSocket) ->
 	recv(WebSocket, infinity).
-recv(?WS_FMT(WebSocket), Timeout) ->
-	WebSocket ! ?RECV_REQ(Timeout),
+recv(?WS_FMT(Handler), Timeout) ->
+	Handler ! ?RECV_REQ(Timeout),
 	receive
-		?RECV_RES(WebSocket, Data) -> 
+		?RECV_RES(Handler, Data) -> 
 			{ok, Data}
 		after 2000 ->
 			{error, timeout}
 	end.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
-send(?WS_FMT(WebSocket), {text, Data}) ->
-	WebSocket ! ?SEND_REQ(Data),
+send(?WS_FMT(Handler), {text, Data}) ->
+	Handler ! ?SEND_REQ(Data),
 	receive
-		?SEND_RES_OK(WebSocket) -> ok;
-		?SEND_RES_ERROR(WebSocket, Reason) -> 
+		?SEND_RES_OK(Handler) -> ok;
+		?SEND_RES_ERROR(Handler, Reason) -> 
 			{error, Reason}
 		after 2000 ->
 			{error, timeout}
 	end.
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
-close(?WS_FMT(WebSocket)) ->
-	WebSocket ! ?CLOSE_REQ,
+close(?WS_FMT(Handler)) ->
+	Handler ! ?CLOSE_REQ,
 	ok.
 %------------------------------------------------------------------------------
 %% Obtem a Url utilizada para estabelecer a Conexao WebSocket
@@ -115,17 +113,20 @@ normal_connect(Url, Address, Port, Options) ->
 	end.
 %------------------------------------------------------------------------------
 make_handshake(Url, Origin, SubProtocol, TCPSocket) ->
-	{ReqList, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
-	RequestHeader = ws_header:to_string(ReqList),
+	{Request, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
+	RequestHeader = ws_header:to_string(Request),
+
+	HandlerParameter = [{url, Url}, {origin, Origin}, {request, Request}],
+
 	case gen_tcp:send(TCPSocket, RequestHeader) of
 		ok ->
-			receive_response(TCPSocket, Answer, ReqList);
+			receive_response(TCPSocket, Answer, HandlerParameter);
 		Error ->
 			Error
 	end.
 %------------------------------------------------------------------------------
-receive_response(TCPSocket, Answer, ReqList) ->
-	case catch(receive_response_1(TCPSocket, Answer, ReqList)) of
+receive_response(TCPSocket, Answer, HandlerParameter) ->
+	case catch(receive_response_1(TCPSocket, Answer, HandlerParameter)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
 			Error;
 		{'EXIT', {Reason, _}} ->
@@ -134,16 +135,20 @@ receive_response(TCPSocket, Answer, ReqList) ->
 			Sucess
 	end.
 %------------------------------------------------------------------------------
-receive_response_1(TCPSocket, Answer,ReqList) ->
+receive_response_1(TCPSocket, Answer, HandlerParameter) ->
 	ResponseHeader = receive_response_header(TCPSocket),
 	ServerSolution = receive_response_solution(TCPSocket),
 
-	ResList = ws_header:parse(ResponseHeader ++ ServerSolution),
-	?print(ResList),
+	Response = ws_header:parse(ResponseHeader ++ ServerSolution),
+	SubProtocol = hixie76_lib:get_subprotocol(Response),
 
 	case ServerSolution == Answer of
 		true ->
-			create_websocket_handler(TCPSocket, ReqList, ResList);
+			create_websocket_handler(
+				TCPSocket, 
+				HandlerParameter ++ 
+					[{response, Response}, 
+					 {subprotocol, SubProtocol}]);
 		false ->
 			?REPLY_ERROR
 	end.	
@@ -200,27 +205,32 @@ receive_response_solution(TCPSocket) ->
 receive_response_solution(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_response_solution(TCPSocket, Len, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, 1) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
 		{ok, Byte} -> receive_response_solution(
 				TCPSocket, Len-1, Byte ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
-create_websocket_handler(TCPSocket, ReqList, ResList) ->
-	HandlerPid = spawn(?MODULE, main_start, [TCPSocket, self(), ReqList, ResList]),
+create_websocket_handler(TCPSocket, HandlerParameter) ->
+	HandlerPid = spawn(?MODULE, main_start, [TCPSocket, self(), HandlerParameter]),
 	gen_tcp:controlling_process(TCPSocket, HandlerPid),
 
 	WebSocket = ?WS_FMT(HandlerPid),
 
 	{ok, WebSocket}.
 %------------------------------------------------------------------------------
-main_start(TCPSocket, Owner, RequestHeader, ResponseHeader) ->
-	put(request, RequestHeader),
-	put(response, ResponseHeader),
+main_start(TCPSocket, Owner, HandlerParameter) ->
+	main_load_param(HandlerParameter),
 
 	MailBox = queue:new(),
 	Receiver = spawn_link(?MODULE, recv_start, [TCPSocket, self()]),
 
 	main_loop(TCPSocket, Owner, Receiver, MailBox).
+%------------------------------------------------------------------------------
+main_load_param([]) -> ok;
+main_load_param([{Key, Value}|Parameter]) -> 
+	put(Key, Value),
+	main_load_param(Parameter).
+
 %------------------------------------------------------------------------------
 main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 	receive
