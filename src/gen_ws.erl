@@ -52,10 +52,16 @@ accept(_ListenWebSocket, _HandShakeOptions, _Timeout) ->
 	?TODO.
 %------------------------------------------------------------------------------
 %% Recebe uma mensagem transmitida via WebSocket
-recv(_WebSocket) ->
-	recv(_WebSocket, infinity).
-recv(_WebSocket, _Timeout) ->
-	?TODO.
+recv(WebSocket) ->
+	recv(WebSocket, infinity).
+recv(?WS_FMT(WebSocket), Timeout) ->
+	WebSocket ! ?RECV_REQ(Timeout),
+	receive
+		?RECV_RES(WebSocket, Data) -> 
+			{ok, Data}
+		after 2000 ->
+			{error, timeout}
+	end.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
 send(?WS_FMT(WebSocket), {text, Data}) ->
@@ -260,6 +266,12 @@ recv_start(TCPSocket, Handler) ->
 %------------------------------------------------------------------------------
 recv_loop(TCPSocket, Handler, Buffer) ->
 	case gen_tcp:recv(TCPSocket, ?ALL) of
+		{ok, Stream} ->
+			?UNFRAME_SUCESS(Frame, _) = hixie_frame:unframe(Stream),
+			Handler ! ?RECV_NEW(Frame),
+			recv_loop(TCPSocket, Handler, Buffer);
+		{error, closed} ->
+			Handler ! ?RECV_CLOSE;
 		X ->
 			?print("rcv_loop", X),
 			recv_loop(TCPSocket, Handler, Buffer)

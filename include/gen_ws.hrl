@@ -70,6 +70,7 @@
 -define(TCP_CLOSE(Socket),         {tcp_closed, Socket}).
 %------------------------------------------------------------------------------
 -define(RECV_NEW(From, Frame), {From, recv_frame, Frame}).
+-define(RECV_NEW(Frame), ?RECV_NEW(self(), Frame)).
 
 -define(RECV_CLOSE(From), {From, receiver_closed}).
 -define(RECV_CLOSE, ?RECV_CLOSE(self())).
