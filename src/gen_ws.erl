@@ -26,15 +26,23 @@
 connect(Url) ->
 	connect(Url, ?DEF_ORIGIN).
 connect(Url, Origin) ->
-	connect(Url, Origin, ?DEF_CON_OPT).
-connect(Url, Origin, Options) ->
-	connect(Url, Origin, Options, ?DEF_TIMEOUT).
-connect(Url, Origin, Options, Timeout) ->
+	connect(Url, Origin, ?DEF_SUBP).
+connect(Url, Origin, SubProtocol) ->
+	connect(Url, Origin, SubProtocol, ?DEF_CON_OPT).
+connect(Url, Origin, SubProtocol, Options) ->
+	connect(Url, Origin, SubProtocol, Options, ?DEF_TIMEOUT).
+connect(Url, Origin, SubProtocol, Options, Timeout) ->
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 
 	case Mode of
 		normal -> normal_connect(
-				Url, Origin, Address, Port, Options, Timeout);
+				Url, 
+				Origin, 
+				SubProtocol, 
+				Address, 
+				Port, 
+				Options, 
+				Timeout);
 		_Other ->
 			{error, notsupport}
 	end.
@@ -93,16 +101,27 @@ getstate(_WebSocket) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-normal_connect(Url, Origin, Address, Port, Options, Timeout) ->
+normal_connect(
+	Url, 
+       	Origin, 
+	SubProtocol,
+	Address, 
+	Port, 
+	Options, 
+	Timeout) ->
 	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
 		{ok, TCPSocket} ->
-			make_handshake(Url, Origin, TCPSocket);
+			make_handshake(
+				Url, 
+				Origin, 
+				SubProtocol, 
+				TCPSocket);
 		Error ->
 			Error
 	end.
 %------------------------------------------------------------------------------
-make_handshake(Url, Origin, TCPSocket) ->
-	{ReqList, Answer} = hixie76_lib:gen_request(Url, Origin),
+make_handshake(Url, Origin, SubProtocol, TCPSocket) ->
+	{ReqList, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
 	RequestHeader = ws_header:to_string(ReqList),
 	case gen_tcp:send(TCPSocket, RequestHeader) of
 		ok ->

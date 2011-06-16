@@ -9,6 +9,7 @@
 % Default Settings
 -define(DEF_ORIGIN, "127.0.0.1").
 -define(DEF_CON_OPT, []).
+-define(DEF_SUBP, []).
 -define(DEF_TIMEOUT, infinity).
 %------------------------------------------------------------------------------
 % Magic Numbers

@@ -79,13 +79,9 @@ gen_response(Request) ->
 	end.
 %------------------------------------------------------------------------------
 gen_response_1(Request) ->
-	Scheme = "ws://",
-	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
-	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 	{found, Origin} = ws_header:find(?HIXIE76_ORIGIN_REQ, Request),
 	
-	Location = Scheme ++ Host ++ Uri,
-
+	Location = location_from_request(Request),
 	Response = [
 		{?HIXIE76_STATUS_CODE,   "101"},
 		{?HIXIE76_REASON_PHRASE, ?HIXIE76_REASON_VAL},
@@ -243,4 +239,9 @@ random_byte() ->
 			Byte
 	end.
 %------------------------------------------------------------------------------
+location_from_request(Request) ->
+	Scheme = "ws://",
+	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
+	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 
+	Scheme ++ Host ++ Uri.
