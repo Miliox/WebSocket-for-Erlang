@@ -14,9 +14,9 @@
 -include("gen_ws.hrl").
 -include("ws_frame.hrl").
 %------------------------------------------------------------------------------
+-import(ws_url).
 -import(gen_tcp).
 -import(hixie76_lib).
--import(ws_url).
 %------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
 -export([accept/1, accept/2, accept/3, recv/1, recv/2, send/2, close/1]).
@@ -42,8 +42,8 @@ get_opt(Key, Dict) ->
 	end.
 %------------------------------------------------------------------------------
 get_default(origin) -> ?DEF_ORIGIN;
-get_default(subprotocol) -> ?DEF_SUBP;
 get_default(timeout) -> ?DEF_TIMEOUT;
+get_default(subprotocol) -> ?DEF_SUBP;
 get_default(_) -> erlang:error(badarg).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
@@ -79,7 +79,9 @@ send(?WS_FMT(Handler), {text, Data}) ->
 			{error, Reason}
 		after 2000 ->
 			{error, timeout}
-	end.
+	end;
+send(_, _) ->
+	{error, einval}.
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
 close(?WS_FMT(Handler)) ->
@@ -230,7 +232,6 @@ main_load_param([]) -> ok;
 main_load_param([{Key, Value}|Parameter]) -> 
 	put(Key, Value),
 	main_load_param(Parameter).
-
 %------------------------------------------------------------------------------
 main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 	receive
