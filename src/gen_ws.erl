@@ -71,7 +71,7 @@ recv(?WS_FMT(Handler), Timeout) ->
 	end.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
-send(?WS_FMT(Handler), {text, Data}) ->
+send(?WS_FMT(Handler), Data) when is_list(Data) ->
 	Handler ! ?SEND_REQ(Data),
 	receive
 		?SEND_RES_OK(Handler) -> ok;
@@ -80,6 +80,8 @@ send(?WS_FMT(Handler), {text, Data}) ->
 		after 2000 ->
 			{error, timeout}
 	end;
+send(WebSocket, Data) when is_binary(Data) ->
+	send(WebSocket, binary_to_list(Data));
 send(_, _) ->
 	{error, einval}.
 %------------------------------------------------------------------------------
@@ -224,7 +226,7 @@ main_start(TCPSocket, Owner, HandlerParameter) ->
 	main_load_param(HandlerParameter),
 
 	MailBox = queue:new(),
-	Receiver = spawn_link(?MODULE, recv_start, [TCPSocket, self()]),
+	Receiver = spawn_link(?MODULE, receiver_start, [TCPSocket, self()]),
 
 	main_loop(TCPSocket, Owner, Receiver, MailBox).
 %------------------------------------------------------------------------------
@@ -285,19 +287,19 @@ recv_frame(MailBox) ->
 			{?RECV_RES(empty), MailBox}
 	end.
 %------------------------------------------------------------------------------
-recv_start(TCPSocket, Handler) ->
-	recv_loop(TCPSocket, Handler, []).
+receiver_start(TCPSocket, Handler) ->
+	receiver_loop(TCPSocket, Handler, []).
 %------------------------------------------------------------------------------
-recv_loop(TCPSocket, Handler, Buffer) ->
+receiver_loop(TCPSocket, Handler, Buffer) ->
 	case gen_tcp:recv(TCPSocket, ?ALL) of
 		{ok, Stream} ->
 			?UNFRAME_SUCESS(Frame, _) = hixie_frame:unframe(Stream),
 			Handler ! ?RECV_NEW(Frame),
-			recv_loop(TCPSocket, Handler, Buffer);
+			receiver_loop(TCPSocket, Handler, Buffer);
 		{error, closed} ->
 			Handler ! ?RECV_CLOSE;
 		X ->
 			?print("rcv_loop", X),
-			recv_loop(TCPSocket, Handler, Buffer)
+			receiver_loop(TCPSocket, Handler, Buffer)
 	end.
 %------------------------------------------------------------------------------
