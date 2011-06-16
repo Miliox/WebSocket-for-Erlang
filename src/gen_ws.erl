@@ -23,29 +23,30 @@
 -export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
+% Ideal: connect(Url, Options)
 connect(Url) ->
-	connect(Url, ?DEF_ORIGIN).
-connect(Url, Origin) ->
-	connect(Url, Origin, ?DEF_SUBP).
-connect(Url, Origin, SubProtocol) ->
-	connect(Url, Origin, SubProtocol, ?DEF_CON_OPT).
-connect(Url, Origin, SubProtocol, Options) ->
-	connect(Url, Origin, SubProtocol, Options, ?DEF_TIMEOUT).
-connect(Url, Origin, SubProtocol, Options, Timeout) ->
+	connect(Url, ?DEF_CON_OPT).
+connect(Url, Options) ->
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
-
+	
 	case Mode of
-		normal -> normal_connect(
-				Url, 
-				Origin, 
-				SubProtocol, 
-				Address, 
-				Port, 
-				Options, 
-				Timeout);
-		_Other ->
-			{error, notsupport}
+		normal -> normal_connect(Url, Address, Port, Options);
+		secure -> {error, notsupport}
 	end.
+%------------------------------------------------------------------------------
+get_opt(Key, Dict) ->
+	case orddict:find(Key, Dict) of
+		{ok, Value} -> 
+			Value;
+		error -> 
+			get_default(Key)
+	end.
+%------------------------------------------------------------------------------
+get_default(origin) -> ?DEF_ORIGIN;
+get_default(subprotocol) -> ?DEF_SUBP;
+get_default(timeout) -> ?DEF_TIMEOUT;
+get_default(_) -> erlang:error(badarg).
+
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(_Port, _Options) ->
@@ -101,21 +102,14 @@ getstate(_WebSocket) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-normal_connect(
-	Url, 
-       	Origin, 
-	SubProtocol,
-	Address, 
-	Port, 
-	Options, 
-	Timeout) ->
-	case gen_tcp:connect(Address, Port, ?TCP_OPT++Options, Timeout) of
+normal_connect(Url, Address, Port, Options) ->
+	Origin = get_opt(origin, Options),
+	Timeout = get_opt(timeout, Options),
+	SubProtocol = get_opt(subprotocol, Options),
+
+	case gen_tcp:connect(Address, Port, ?TCP_OPT, Timeout) of
 		{ok, TCPSocket} ->
-			make_handshake(
-				Url, 
-				Origin, 
-				SubProtocol, 
-				TCPSocket);
+			make_handshake(Url, Origin, SubProtocol, TCPSocket);
 		Error ->
 			Error
 	end.
