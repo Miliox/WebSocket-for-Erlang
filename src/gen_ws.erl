@@ -12,6 +12,7 @@
 -vsn(2).
 %------------------------------------------------------------------------------
 -include("gen_ws.hrl").
+-include("ws_frame.hrl").
 %------------------------------------------------------------------------------
 -import(gen_tcp).
 -import(hixie76_lib).
@@ -57,12 +58,20 @@ recv(_WebSocket, _Timeout) ->
 	?TODO.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
-send(_WebSocket, {_Type, _Data}) ->
-	?TODO.
+send(?WS_FMT(WebSocket), {text, Data}) ->
+	WebSocket ! ?SEND_REQ(Data),
+	receive
+		?SEND_RES_OK(WebSocket) -> ok;
+		?SEND_RES_ERROR(WebSocket, Reason) -> 
+			{error, Reason}
+		after 2000 ->
+			{error, timeout}
+	end.
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
-close(_WebSocket) ->
-	?TODO.
+close(?WS_FMT(WebSocket)) ->
+	WebSocket ! ?CLOSE_REQ,
+	ok.
 %------------------------------------------------------------------------------
 %% Obtem a Url utilizada para estabelecer a Conexao WebSocket
 geturl(_WebSocket) ->
@@ -196,9 +205,54 @@ main_start(TCPSocket, Owner, RequestHeader, ResponseHeader) ->
 %------------------------------------------------------------------------------
 main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 	receive
+		% WebSocket API
+		?SEND_REQ(From, Data) ->
+			Reply = send_frame(TCPSocket, Data),
+			From ! Reply,
+			main_loop(TCPSocket, Owner, Receiver, MailBox);
+		?RECV_REQ(From, _Timeout) ->
+			{Reply, NewMailBox} = recv_frame(MailBox),
+			From ! Reply,
+			main_loop(TCPSocket, Owner, Receiver, NewMailBox);
+		?CHANGE_OWNER(Owner, NewOwner) ->
+			Owner ! ?CHANGE_OWNER_OK,
+			main_loop(TCPSocket, NewOwner, Receiver, MailBox);
+		?CHANGE_OWNER(_, _) ->
+			Owner ! ?CHANGE_OWNER_ERROR(not_owner),
+			main_loop(TCPSocket, Owner, Receiver, MailBox);
+		?CLOSE_REQ ->
+			gen_tcp:close(TCPSocket),
+			Owner ! ?WS_CLOSE_SIGNAL,
+			main_end_loop(MailBox);
+		% Receiver Update
+		?RECV_NEW(Receiver, Msg) ->
+			main_loop(TCPSocket, Owner, Receiver, queue:in(Msg, MailBox));
+		?RECV_CLOSE(Receiver) ->
+			gen_tcp:close(TCPSocket),
+			Owner ! ?WS_CLOSE_SIGNAL,
+			main_end_loop(MailBox);
+		% Other
 		X ->
 			?print("main_loop", X),
 			main_loop(TCPSocket, Owner, Receiver, MailBox)
+	end.
+%------------------------------------------------------------------------------
+main_end_loop(MailBox) ->
+	?print("terminate", MailBox).
+%------------------------------------------------------------------------------
+send_frame(TCPSocket, Data) ->
+	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
+	case gen_tcp:send(TCPSocket, Frame) of
+		ok -> ?SEND_RES_OK;
+		{error, Reason} -> ?SEND_RES_ERROR(Reason)
+	end.
+%------------------------------------------------------------------------------
+recv_frame(MailBox) ->
+	case queue:out(MailBox) of
+		{{value, Message}, NewMailBox} ->
+			{?RECV_RES(Message), NewMailBox};
+		{empty, MailBox} ->
+			{?RECV_RES(empty), MailBox}
 	end.
 %------------------------------------------------------------------------------
 recv_start(TCPSocket, Handler) ->

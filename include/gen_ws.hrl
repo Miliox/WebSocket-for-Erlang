@@ -38,7 +38,7 @@
 -define(SEND_REQ(From, Message),  {From, send, Message}).
 -define(SEND_REQ(Message),  ?SEND_REQ(self(), Message)).
 
--define(WS_CLOSE, {self(), close}).
+-define(CLOSE_REQ, close).
 
 -define(CHANGE_OWNER(From, NewOwner), {From, change_owner, NewOwner}).
 -define(CHANGE_OWNER(NewOwner), ?CHANGE_OWNER(self(), NewOwner)).
@@ -69,3 +69,7 @@
 -define(TCP_ERROR(Socket, Reason), {tcp_error, Socket, Reason}).
 -define(TCP_CLOSE(Socket),         {tcp_closed, Socket}).
 %------------------------------------------------------------------------------
+-define(RECV_NEW(From, Frame), {From, recv_frame, Frame}).
+
+-define(RECV_CLOSE(From), {From, receiver_closed}).
+-define(RECV_CLOSE, ?RECV_CLOSE(self())).
