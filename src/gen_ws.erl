@@ -307,13 +307,20 @@ receiver_loop(TCPSocket, Handler, Context, Buffer) ->
 %------------------------------------------------------------------------------
 receiver_unframe(TCPSocket, Handler, Context, Stream) ->
 	case hixie_frame:unframe(Stream, Context) of
+		% Close Signal
 		?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), _) ->
 			Handler ! ?RECV_CLOSE;
-		?UNFRAME_SUCESS(Frame, Buffer) ->
-			Handler ! ?RECV_NEW(Frame),
+		% Only Text Frames
+		?UNFRAME_SUCESS({text, Data}, Buffer) ->
+			Handler ! ?RECV_NEW(Data),
 			receiver_loop(TCPSocket, Handler, nil, Buffer);
+		% Ignore All Other Frames
+		?UNFRAME_SUCESS(_, Buffer) ->
+			receiver_loop(TCPSocket, Handler, nil, Buffer);
+		% Partial UnFrame
 		?UNFRAME_PARTIAL(Context, Buffer) ->
 			receiver_loop(TCPSocket, Handler, Context, Buffer);
+		% Invalid Frame
 		?UNFRAME_ERROR(_, _) ->
 			Handler ! ?RECV_CLOSE;
 		X ->
