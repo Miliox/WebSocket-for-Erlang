@@ -223,17 +223,19 @@ create_websocket_handler(TCPSocket, HandlerParameter) ->
 	{ok, WebSocket}.
 %------------------------------------------------------------------------------
 main_start(TCPSocket, Owner, HandlerParameter) ->
-	main_load_param(HandlerParameter),
+	main_load(HandlerParameter),
 
 	MailBox = queue:new(),
 	Receiver = spawn_link(?MODULE, receiver_start, [TCPSocket, self()]),
 
 	main_loop(TCPSocket, Owner, Receiver, MailBox).
 %------------------------------------------------------------------------------
-main_load_param([]) -> ok;
-main_load_param([{Key, Value}|Parameter]) -> 
+main_load([]) -> ok;
+main_load([{Key, Value}|Parameter]) -> 
 	put(Key, Value),
-	main_load_param(Parameter).
+	main_load(Parameter);
+main_load([_|Parameter]) ->
+	main_load(Parameter).
 %------------------------------------------------------------------------------
 main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 	receive
@@ -288,18 +290,32 @@ recv_frame(MailBox) ->
 	end.
 %------------------------------------------------------------------------------
 receiver_start(TCPSocket, Handler) ->
-	receiver_loop(TCPSocket, Handler, []).
+	receiver_loop(TCPSocket, Handler, nil, []).
 %------------------------------------------------------------------------------
-receiver_loop(TCPSocket, Handler, Buffer) ->
+receiver_loop(TCPSocket, Handler, Context, []) ->
 	case gen_tcp:recv(TCPSocket, ?ALL) of
 		{ok, Stream} ->
-			?UNFRAME_SUCESS(Frame, _) = hixie_frame:unframe(Stream),
-			Handler ! ?RECV_NEW(Frame),
-			receiver_loop(TCPSocket, Handler, Buffer);
+			receiver_unframe(TCPSocket, Handler, Context, Stream);
 		{error, closed} ->
 			Handler ! ?RECV_CLOSE;
 		X ->
 			?print("rcv_loop", X),
-			receiver_loop(TCPSocket, Handler, Buffer)
-	end.
+			receiver_loop(TCPSocket, Handler, Context, [])
+	end;
+receiver_loop(TCPSocket, Handler, Context, Buffer) ->
+	receiver_unframe(TCPSocket, Handler, Context, Buffer).
 %------------------------------------------------------------------------------
+receiver_unframe(TCPSocket, Handler, Context, Stream) ->
+	case hixie_frame:unframe(Stream, Context) of
+		?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), _) ->
+			Handler ! ?RECV_CLOSE;
+		?UNFRAME_SUCESS(Frame, Buffer) ->
+			Handler ! ?RECV_NEW(Frame),
+			receiver_loop(TCPSocket, Handler, nil, Buffer);
+		?UNFRAME_PARTIAL(Context, Buffer) ->
+			receiver_loop(TCPSocket, Handler, Context, Buffer);
+		?UNFRAME_ERROR(_, _) ->
+			Handler ! ?RECV_CLOSE;
+		X ->
+			?print("error", X)
+	end.

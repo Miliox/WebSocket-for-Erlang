@@ -32,20 +32,20 @@ frame(_) ->
 %------------------------------------------------------------------------------
 unframe(BitStream) when is_binary(BitStream) ->
 	unframe(binary_to_list(BitStream));
-unframe([Flag|TailStream]=Stream) when is_list(Stream) ->
+unframe([Flag|_]=Stream) when is_list(Stream) ->
 	case Flag of
 		Txt when Txt >= ?TXT_LOW andalso Txt =< ?TXT_HIG ->
 			unframe_text(Stream);
 		Bin when Bin >= ?BIN_LOW orelse Bin =< ?BIN_HIG ->
 			unframe_bin(Stream);
-		?FLAG_END ->
-			?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), TailStream);
 		_ ->
 			?UNFRAME_ERROR(badarg, Stream)
 	end;
 unframe(BadArg) ->
 	?UNFRAME_ERROR(badarg, BadArg).
 %------------------------------------------------------------------------------
+unframe(Stream, nil) ->
+	unframe(Stream);
 unframe(BitStream, Context) when is_binary(BitStream) ->
 	unframe(binary_to_list(BitStream), Context);
 unframe(Stream, {Type, State}) when is_list(Stream) ->
@@ -81,8 +81,13 @@ when
 	(InitialFlag >= ?BIN_LOW) andalso 
 	(InitialFlag =< ?BIN_HIG) ->
 		Factor = InitialFlag - ?BIN_LOW,
-
-		unframe_bin(Stream, Factor).
+		[H|T] = Stream,
+		case H == 16#00 of
+			true ->
+				?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), T);
+			false ->
+				unframe_bin(Stream, Factor)
+		end.
 %------------------------------------------------------------------------------
 unframe_bin([Byte|Stream], AccLength) 
 when
