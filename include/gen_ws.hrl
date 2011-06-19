@@ -16,6 +16,7 @@
 -define(ALL, 0).
 -define(ONLY_ONE, 1).
 -define(SOLUTION_LEN, 16).
+-define(KEY3_LEN, 8).
 %------------------------------------------------------------------------------
 % Magic Characters
 -define(CR, [$\r]). % In a list because is a gen_tcp:recv return type
@@ -31,8 +32,12 @@
 %------------------------------------------------------------------------------
 % Socket Representation
 -define(WS_FMT(WebSocket), {websocket, draft_hixie76, WebSocket}).
+-define(WSL_FMT(WebSocket), {websocket_listen, draft_hixie76, WebSocket}).
 %------------------------------------------------------------------------------
 % WebSocket Cliente API
+-define(ACCEPT_REQ(From, Timeout), {From, accept, Timeout}).
+-define(ACCEPT_REQ(Timeout), ?ACCEPT_REQ(self(), Timeout)).
+
 -define(RECV_REQ(From, Timeout),  {From, recv, Timeout}).
 -define(RECV_REQ(Timeout),  ?RECV_REQ(self(), Timeout)).
 
@@ -45,6 +50,12 @@
 -define(CHANGE_OWNER(NewOwner), ?CHANGE_OWNER(self(), NewOwner)).
 %------------------------------------------------------------------------------
 % WebSocket Handler Process Messages to Cliente API
+-define(ACCEPT_RES_OK(From, WebSocket), {From, accept_ok, WebSocket}).
+-define(ACCEPT_RES_OK(WebSocket), ?ACCEPT_RES_OK(self(), WebSocket)).
+
+-define(ACCEPT_RES_ERROR(From, Reason), {From, accept_error, Reason}).
+-define(ACCEPT_RES_ERROR(Reason), ?ACCEPT_RES_ERROR(self(), Reason)).
+
 -define(RECV_RES(From, Data), {From, recv, Data}).
 -define(RECV_RES(Data), ?RECV_RES(self(), Data)).
 
@@ -84,3 +95,4 @@
 
 -define(RECV_CLOSE(From), {From, receiver_closed}).
 -define(RECV_CLOSE, ?RECV_CLOSE(self())).
+%------------------------------------------------------------------------------
