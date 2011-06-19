@@ -179,7 +179,7 @@ receive_header(TCPSocket) ->
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_header_loop(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_1(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -190,7 +190,7 @@ receive_header_loop(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LFCRLF
 receive_header_loop_1(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			receive_header_loop_2(
 				TCPSocket, ?LF ++ RevBuffer);
@@ -201,7 +201,7 @@ receive_header_loop_1(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta CRLF
 receive_header_loop_2(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_3(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -212,7 +212,7 @@ receive_header_loop_2(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LF
 receive_header_loop_3(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			lists:reverse(?LF ++ RevBuffer);
 		{ok, Char} ->
@@ -226,7 +226,7 @@ receive_response_solution(TCPSocket) ->
 receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_len(TCPSocket, Len, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE) of
+	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, Byte} -> receive_len(
 				TCPSocket, Len-1, Byte ++ RevBuffer)
 	end.
@@ -389,6 +389,8 @@ accept_socket(TCPListen, SocketOwner, Timeout) ->
 accept_request(TCPSocket, SocketOwner) ->
 	Reply = 
 	case catch(accept_request_1(TCPSocket, SocketOwner)) of
+		{error, {error, Reason}} ->
+			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {{case_clause, Reason}, _}} ->
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {Reason, _}} ->
