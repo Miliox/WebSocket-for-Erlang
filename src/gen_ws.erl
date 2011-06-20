@@ -165,11 +165,12 @@ receive_response_1(TCPSocket, Answer, HandlerParameter) ->
 
 	case ServerSolution == Answer of
 		true ->
-			create_websocket_handler(
+			WebSocket = create_websocket_handler(
 				TCPSocket, 
 				HandlerParameter ++ 
 					[{response, Response}, 
-					 {subprotocol, SubProtocol}]);
+					 {subprotocol, SubProtocol}]),
+			 {ok, WebSocket};
 		false ->
 			?REPLY_ERROR
 	end.	
@@ -239,7 +240,7 @@ create_websocket_handler(TCPSocket, HandlerParameter, Owner) ->
 
 	WebSocket = ?WS_FMT(HandlerPid),
 
-	{ok, WebSocket}.
+	WebSocket.
 %------------------------------------------------------------------------------
 main_start(TCPSocket, Owner, HandlerParameter) ->
 	main_load(HandlerParameter),
@@ -408,14 +409,20 @@ accept_request_1(TCPSocket, SocketOwner) ->
 	Response = hixie76_lib:gen_response(Request),
 
 	ResponseHeader = ws_header:to_string(Response),
-	gen_tcp:send(TCPSocket, ResponseHeader),
-
-	HandlerParam = [{request, Request}, {response, Response}],
-	{ok, WebSocket} = 
-		create_websocket_handler(TCPSocket, HandlerParam, SocketOwner),
-
-	WebSocket.
+	case gen_tcp:send(TCPSocket, ResponseHeader) of
+		ok ->
+			accept_socket_ok(
+				TCPSocket, SocketOwner, Request, Response);
+		{error, Reason} ->
+			erlang:error(Reason)
+	end.
 %------------------------------------------------------------------------------
 receive_key3(TCPSocket) ->
 	receive_len(TCPSocket, ?KEY3_LEN, []).
 %------------------------------------------------------------------------------
+accept_socket_ok(TCPSocket, SocketOwner, Request, Response) ->
+	HandlerParam = 
+		[{request, Request},{response, Response}],
+	create_websocket_handler(TCPSocket, HandlerParam, SocketOwner).
+
+
