@@ -408,11 +408,14 @@ accept_request_1(TCPSocket, SocketOwner) ->
 	Request = ws_header:parse(RequestHeader ++ Key3),
 	Response = hixie76_lib:gen_response(Request),
 
+	SubProtocol = hixie76_lib:get_subprotocol(Response),
+
 	ResponseHeader = ws_header:to_string(Response),
 	case gen_tcp:send(TCPSocket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(
-				TCPSocket, SocketOwner, Request, Response);
+				TCPSocket, SocketOwner, 
+				{Request, Response, SubProtocol});
 		{error, Reason} ->
 			erlang:error(Reason)
 	end.
@@ -420,9 +423,11 @@ accept_request_1(TCPSocket, SocketOwner) ->
 receive_key3(TCPSocket) ->
 	receive_len(TCPSocket, ?KEY3_LEN, []).
 %------------------------------------------------------------------------------
-accept_socket_ok(TCPSocket, SocketOwner, Request, Response) ->
+accept_socket_ok(TCPSocket, SocketOwner, {Request, Response, SubProtocol}) ->
 	HandlerParam = 
-		[{request, Request},{response, Response}],
+		[{request, Request},
+		 {response, Response}, 
+		 {subprotocol, SubProtocol}],
 	create_websocket_handler(TCPSocket, HandlerParam, SocketOwner).
 %------------------------------------------------------------------------------
 
