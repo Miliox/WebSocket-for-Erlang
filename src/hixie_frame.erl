@@ -82,7 +82,10 @@ when
 	(InitialFlag =< ?BIN_HIG) ->
 		Factor = InitialFlag - ?BIN_LOW,
 		[H|T] = Stream,
-		case H == 16#00 of
+		case 
+			InitialFlag == 16#ff andalso 
+			H == 16#00
+		of
 			true ->
 				?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), T);
 			false ->

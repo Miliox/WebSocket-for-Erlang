@@ -9,7 +9,7 @@
 
 -module(gen_ws).
 -author("elmiliox@gmail.com").
--vsn(2).
+-vsn(3).
 %------------------------------------------------------------------------------
 -include("gen_ws.hrl").
 -include("ws_frame.hrl").
@@ -424,5 +424,5 @@ accept_socket_ok(TCPSocket, SocketOwner, Request, Response) ->
 	HandlerParam = 
 		[{request, Request},{response, Response}],
 	create_websocket_handler(TCPSocket, HandlerParam, SocketOwner).
-
+%------------------------------------------------------------------------------
 

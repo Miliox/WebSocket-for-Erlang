@@ -13,5 +13,5 @@
 -define(TXT_LOW, ?FLAG_TXT).
 -define(TXT_HIG, ?FLAG_BIN - 1).
 -define(BIN_LOW, ?FLAG_BIN).
--define(BIN_HIG, ?FLAG_END - 1).
+-define(BIN_HIG, ?FLAG_END).
 %------------------------------------------------------------------------------
