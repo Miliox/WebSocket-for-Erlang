@@ -73,13 +73,6 @@
 -define(CHANGE_OWNER_ERROR(Reason), ?CHANGE_OWNER_ERROR(self(), Reason)).
 
 %------------------------------------------------------------------------------
-% TCP Settings
-%-----------------------------------------------------------------------------
-% TCPSocket Active Messages
--define(TCP_RECV_SIGNAL(Socket, Packet),  {tcp, Socket, Packet}).
--define(TCP_ERROR_SIGNAL(Socket, Reason), {tcp_error, Socket, Reason}).
--define(TCP_CLOSE_SIGNAL(Socket),         {tcp_closed, Socket}).
-%------------------------------------------------------------------------------
 % WebSocket Active Messages
 -define(WS_RECV_SIGNAL(Frame),  {ws, ?WS_FMT(self()), Frame}).
 -define(WS_RECV_SIGNAL(WebSocket, Frame), {ws, WebSocket, Frame}).
