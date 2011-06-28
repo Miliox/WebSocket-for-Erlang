@@ -18,6 +18,7 @@
 -define(SOLUTION_LEN, 16).
 -define(KEY3_LEN, 8).
 -define(HEADER_TIMEOUT, 2000).
+-define(MAX_HEADER_LEN, 8192). % Apache Default Limit
 %------------------------------------------------------------------------------
 % Magic Characters
 -define(CR, [$\r]). % In a list because is a gen_tcp:recv return type

@@ -106,7 +106,7 @@ send(?WS_FMT(Handler), Data, Timeout) when is_list(Data) ->
 	after Timeout ->
 		{error, timeout}
 	end;
-send(WebSocket, Data, Timeout) when is_binary(Data) ->
+send(_, Data, _) when is_binary(Data) ->
 	{error, einval};
 send(_, _, _) ->
 	{error, einval}.
@@ -149,7 +149,7 @@ make_handshake(Url, Origin, SubProtocol, Socket) ->
 receive_response(Socket, Answer, HandlerParameter) ->
 	case catch(receive_response_1(Socket, Answer, HandlerParameter)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
-			Error;
+			{error, Error};
 		{'EXIT', {Reason, _}} ->
 			{error, Reason};
 		Sucess ->
@@ -176,35 +176,47 @@ receive_response_1(Socket, Answer, HandlerParameter) ->
 	end.	
 %------------------------------------------------------------------------------
 receive_header(Socket) ->
-	receive_header_loop(Socket, []).
+	receive_header_loop(Socket, [], 0).
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
-receive_header_loop(Socket, RevBuffer) ->
+receive_header_loop(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR}  -> receive_header_loop_1(Socket, ?CR++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
-	end.
+		{ok, ?CR}  -> receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+	end;
+receive_header_loop(_, _, _) ->
+	erlang:error(header_overflow).
 %------------------------------------------------------------------------------
 % Falta LFCRLF
-receive_header_loop_1(Socket, RevBuffer) ->
+receive_header_loop_1(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?LF}  -> receive_header_loop_2(Socket, ?LF++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
-	end.
+		{ok, ?LF}  -> receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+	end;
+receive_header_loop_1(_, _, _) ->
+	erlang:error(header_overflow).
 %------------------------------------------------------------------------------
 % Falta CRLF
-receive_header_loop_2(Socket, RevBuffer) ->
+receive_header_loop_2(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR}  -> receive_header_loop_3(Socket, ?CR++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
-	end.
+		{ok, ?CR}  -> receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+	end;
+receive_header_loop_2(_, _, _) ->
+	erlang:error(header_overflow).
 %------------------------------------------------------------------------------
 % Falta LF
-receive_header_loop_3(Socket, RevBuffer) ->
+receive_header_loop_3(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF}  -> lists:reverse(?LF++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer)
-	end.
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+	end;
+receive_header_loop_3(_, _, _) ->
+	erlang:error(header_overflow).
 %------------------------------------------------------------------------------
 receive_response_solution(Socket) ->
 	receive_len(Socket, ?SOLUTION_LEN, []).
