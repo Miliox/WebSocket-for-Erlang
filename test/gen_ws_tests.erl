@@ -14,8 +14,11 @@
 -define(TODO, {error, todo}).
 %------------------------------------------------------------------------------
 connect_test() ->
-	[?_assert(gen_ws:connect("") == ?TODO)].
+	_Url = "ws://echo.websocket.org/",
+	_SecUrl = "wss://echo.websocket.org",
+	_Origin = {origin, "http://websocket.org"},
 
+	[?_assert(gen_ws:connect("") == ?TODO)].
 listen_test() ->
 	[?_assert(gen_ws:listen(0, []) == ?TODO)].
 %------------------------------------------------------------------------------

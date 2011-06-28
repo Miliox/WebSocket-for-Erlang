@@ -17,7 +17,7 @@
 -define(ONLY_ONE, 1).
 -define(SOLUTION_LEN, 16).
 -define(KEY3_LEN, 8).
--define(HEADER_TIMEOUT, 200).
+-define(HEADER_TIMEOUT, 2000).
 %------------------------------------------------------------------------------
 % Magic Characters
 -define(CR, [$\r]). % In a list because is a gen_tcp:recv return type

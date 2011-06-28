@@ -27,9 +27,17 @@
 connect(Url) ->
 	connect(Url, ?DEF_CON_OPT).
 connect(Url, Options) ->
+	Origin = get_opt(origin, Options),
+	Timeout = get_opt(timeout, Options),
+	SubProtocol = get_opt(subprotocol, Options),
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
-	
-	connect_1(Mode, Url, Address, Port, Options).
+
+	case socket:connect(Mode, Address, Port, Timeout) of
+		{ok, Socket} ->
+			make_handshake(Url, Origin, SubProtocol, Socket);
+		Error ->
+			Error
+	end.
 %------------------------------------------------------------------------------
 get_opt(Key, Dict) ->
 	case orddict:find(Key, Dict) of
@@ -119,33 +127,21 @@ getstate(_WebSocket) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-connect_1(Mode, Url, Address, Port, Options) ->
-	Origin = get_opt(origin, Options),
-	Timeout = get_opt(timeout, Options),
-	SubProtocol = get_opt(subprotocol, Options),
-
-	case socket:connect(Mode, Address, Port, Timeout) of
-		{ok, TCPSocket} ->
-			make_handshake(Url, Origin, SubProtocol, TCPSocket);
-		Error ->
-			Error
-	end.
-%------------------------------------------------------------------------------
-make_handshake(Url, Origin, SubProtocol, TCPSocket) ->
+make_handshake(Url, Origin, SubProtocol, Socket) ->
 	{Request, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
 	RequestHeader = ws_header:to_string(Request),
 
 	HandlerParameter = [{url, Url}, {origin, Origin}, {request, Request}],
 
-	case socket:send(TCPSocket, RequestHeader) of
+	case socket:send(Socket, RequestHeader) of
 		ok ->
-			receive_response(TCPSocket, Answer, HandlerParameter);
+			receive_response(Socket, Answer, HandlerParameter);
 		Error ->
 			Error
 	end.
 %------------------------------------------------------------------------------
-receive_response(TCPSocket, Answer, HandlerParameter) ->
-	case catch(receive_response_1(TCPSocket, Answer, HandlerParameter)) of
+receive_response(Socket, Answer, HandlerParameter) ->
+	case catch(receive_response_1(Socket, Answer, HandlerParameter)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
 			Error;
 		{'EXIT', {Reason, _}} ->
@@ -154,9 +150,9 @@ receive_response(TCPSocket, Answer, HandlerParameter) ->
 			Sucess
 	end.
 %------------------------------------------------------------------------------
-receive_response_1(TCPSocket, Answer, HandlerParameter) ->
-	ResponseHeader = receive_header(TCPSocket),
-	ServerSolution = receive_response_solution(TCPSocket),
+receive_response_1(Socket, Answer, HandlerParameter) ->
+	ResponseHeader = receive_header(Socket),
+	ServerSolution = receive_response_solution(Socket),
 
 	Response = ws_header:parse(ResponseHeader ++ ServerSolution),
 	SubProtocol = hixie76_lib:get_subprotocol(Response),
@@ -164,7 +160,7 @@ receive_response_1(TCPSocket, Answer, HandlerParameter) ->
 	case ServerSolution == Answer of
 		true ->
 			WebSocket = create_websocket_handler(
-				TCPSocket, 
+				Socket, 
 				HandlerParameter ++ 
 					[{response, Response}, 
 					 {subprotocol, SubProtocol}]),
@@ -173,80 +169,80 @@ receive_response_1(TCPSocket, Answer, HandlerParameter) ->
 			?REPLY_ERROR
 	end.	
 %------------------------------------------------------------------------------
-receive_header(TCPSocket) ->
-	receive_header_loop(TCPSocket, []).
+receive_header(Socket) ->
+	receive_header_loop(Socket, []).
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
-receive_header_loop(TCPSocket, RevBuffer) ->
-	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+receive_header_loop(Socket, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_1(
-				TCPSocket, ?CR ++ RevBuffer);
+				Socket, ?CR ++ RevBuffer);
 		{ok, Char} ->
 			receive_header_loop(
-				TCPSocket, Char ++ RevBuffer)
+				Socket, Char ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta LFCRLF
-receive_header_loop_1(TCPSocket, RevBuffer) ->
-	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+receive_header_loop_1(Socket, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			receive_header_loop_2(
-				TCPSocket, ?LF ++ RevBuffer);
+				Socket, ?LF ++ RevBuffer);
 		{ok, Char} ->
 			receive_header_loop(
-				TCPSocket, Char ++ RevBuffer)
+				Socket, Char ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta CRLF
-receive_header_loop_2(TCPSocket, RevBuffer) ->
-	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+receive_header_loop_2(Socket, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_3(
-				TCPSocket, ?CR ++ RevBuffer);
+				Socket, ?CR ++ RevBuffer);
 		{ok, Char} ->
 			receive_header_loop(
-				TCPSocket, Char ++ RevBuffer)
+				Socket, Char ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta LF
-receive_header_loop_3(TCPSocket, RevBuffer) ->
-	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+receive_header_loop_3(Socket, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			lists:reverse(?LF ++ RevBuffer);
 		{ok, Char} ->
 			receive_header_loop(
-				TCPSocket, Char ++ RevBuffer)
+				Socket, Char ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
-receive_response_solution(TCPSocket) ->
-	receive_len(TCPSocket, ?SOLUTION_LEN, []).
+receive_response_solution(Socket) ->
+	receive_len(Socket, ?SOLUTION_LEN, []).
 %------------------------------------------------------------------------------
 receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
-receive_len(TCPSocket, Len, RevBuffer) ->
-	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+receive_len(Socket, Len, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, Byte} -> receive_len(
-				TCPSocket, Len-1, Byte ++ RevBuffer)
+				Socket, Len-1, Byte ++ RevBuffer)
 	end.
 %------------------------------------------------------------------------------
-create_websocket_handler(TCPSocket, HandlerParameter) ->
-	create_websocket_handler(TCPSocket, HandlerParameter, self()).
-create_websocket_handler(TCPSocket, HandlerParameter, Owner) ->
-	HandlerPid = spawn(?MODULE, main_start, [TCPSocket, Owner, HandlerParameter]),
-	socket:controlling_process(TCPSocket, HandlerPid),
+create_websocket_handler(Socket, HandlerParameter) ->
+	create_websocket_handler(Socket, HandlerParameter, self()).
+create_websocket_handler(Socket, HandlerParameter, Owner) ->
+	HandlerPid = spawn(?MODULE, main_start, [Socket, Owner, HandlerParameter]),
+	socket:controlling_process(Socket, HandlerPid),
 
 	WebSocket = ?WS_FMT(HandlerPid),
 
 	WebSocket.
 %------------------------------------------------------------------------------
-main_start(TCPSocket, Owner, HandlerParameter) ->
+main_start(Socket, Owner, HandlerParameter) ->
 	main_load(HandlerParameter),
 
 	MailBox = queue:new(),
-	Receiver = spawn_link(?MODULE, receiver_start, [TCPSocket, self()]),
+	Receiver = spawn_link(?MODULE, receiver_start, [Socket, self()]),
 
-	main_loop(TCPSocket, Owner, Receiver, MailBox).
+	main_loop(Socket, Owner, Receiver, MailBox).
 %------------------------------------------------------------------------------
 main_load([]) -> ok;
 main_load([{Key, Value}|Parameter]) -> 
@@ -255,46 +251,46 @@ main_load([{Key, Value}|Parameter]) ->
 main_load([_|Parameter]) ->
 	main_load(Parameter).
 %------------------------------------------------------------------------------
-main_loop(TCPSocket, Owner, Receiver, MailBox) ->
+main_loop(Socket, Owner, Receiver, MailBox) ->
 	receive
 		% WebSocket API
 		?SEND_REQ(From, Data) ->
-			Reply = send_frame(TCPSocket, Data),
+			Reply = send_frame(Socket, Data),
 			From ! Reply,
-			main_loop(TCPSocket, Owner, Receiver, MailBox);
+			main_loop(Socket, Owner, Receiver, MailBox);
 		?RECV_REQ(From, _Timeout) ->
 			{Reply, NewMailBox} = recv_frame(MailBox),
 			From ! Reply,
-			main_loop(TCPSocket, Owner, Receiver, NewMailBox);
+			main_loop(Socket, Owner, Receiver, NewMailBox);
 		?CHANGE_OWNER(Owner, NewOwner) ->
 			Owner ! ?CHANGE_OWNER_OK,
-			main_loop(TCPSocket, NewOwner, Receiver, MailBox);
+			main_loop(Socket, NewOwner, Receiver, MailBox);
 		?CHANGE_OWNER(From, _) ->
 			From ! ?CHANGE_OWNER_ERROR(not_owner),
-			main_loop(TCPSocket, Owner, Receiver, MailBox);
+			main_loop(Socket, Owner, Receiver, MailBox);
 		?CLOSE_REQ ->
-			socket:close(TCPSocket),
+			socket:close(Socket),
 			Owner ! ?WS_CLOSE_SIGNAL,
 			main_end_loop(MailBox);
 		% Receiver Update
 		?RECV_NEW(Receiver, Msg) ->
-			main_loop(TCPSocket, Owner, Receiver, queue:in(Msg, MailBox));
+			main_loop(Socket, Owner, Receiver, queue:in(Msg, MailBox));
 		?RECV_CLOSE(Receiver) ->
-			socket:close(TCPSocket),
+			socket:close(Socket),
 			Owner ! ?WS_CLOSE_SIGNAL,
 			main_end_loop(MailBox);
 		% Other
 		X ->
 			?print("main_loop", X),
-			main_loop(TCPSocket, Owner, Receiver, MailBox)
+			main_loop(Socket, Owner, Receiver, MailBox)
 	end.
 %------------------------------------------------------------------------------
 main_end_loop(MailBox) ->
 	?print("terminate", MailBox).
 %------------------------------------------------------------------------------
-send_frame(TCPSocket, Data) ->
+send_frame(Socket, Data) ->
 	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
-	case socket:send(TCPSocket, Frame) of
+	case socket:send(Socket, Frame) of
 		ok -> ?SEND_RES_OK;
 		{error, Reason} -> ?SEND_RES_ERROR(Reason)
 	end.
@@ -307,23 +303,23 @@ recv_frame(MailBox) ->
 			{?RECV_RES(empty), MailBox}
 	end.
 %------------------------------------------------------------------------------
-receiver_start(TCPSocket, Handler) ->
-	receiver_loop(TCPSocket, Handler, nil, []).
+receiver_start(Socket, Handler) ->
+	receiver_loop(Socket, Handler, nil, []).
 %------------------------------------------------------------------------------
-receiver_loop(TCPSocket, Handler, Context, []) ->
-	case socket:recv(TCPSocket, ?ALL) of
+receiver_loop(Socket, Handler, Context, []) ->
+	case socket:recv(Socket, ?ALL) of
 		{ok, Stream} ->
-			receiver_unframe(TCPSocket, Handler, Context, Stream);
+			receiver_unframe(Socket, Handler, Context, Stream);
 		{error, closed} ->
 			Handler ! ?RECV_CLOSE;
 		X ->
 			?print("rcv_loop", X),
-			receiver_loop(TCPSocket, Handler, Context, [])
+			receiver_loop(Socket, Handler, Context, [])
 	end;
-receiver_loop(TCPSocket, Handler, Context, Buffer) ->
-	receiver_unframe(TCPSocket, Handler, Context, Buffer).
+receiver_loop(Socket, Handler, Context, Buffer) ->
+	receiver_unframe(Socket, Handler, Context, Buffer).
 %------------------------------------------------------------------------------
-receiver_unframe(TCPSocket, Handler, Context, Stream) ->
+receiver_unframe(Socket, Handler, Context, Stream) ->
 	case hixie_frame:unframe(Stream, Context) of
 		% Close Signal
 		?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), _) ->
@@ -331,13 +327,13 @@ receiver_unframe(TCPSocket, Handler, Context, Stream) ->
 		% Only Text Frames
 		?UNFRAME_SUCESS({text, Data}, Buffer) ->
 			Handler ! ?RECV_NEW(Data),
-			receiver_loop(TCPSocket, Handler, nil, Buffer);
+			receiver_loop(Socket, Handler, nil, Buffer);
 		% Ignore All Other Frames
 		?UNFRAME_SUCESS(_, Buffer) ->
-			receiver_loop(TCPSocket, Handler, nil, Buffer);
+			receiver_loop(Socket, Handler, nil, Buffer);
 		% Partial UnFrame
 		?UNFRAME_PARTIAL(Context, Buffer) ->
-			receiver_loop(TCPSocket, Handler, Context, Buffer);
+			receiver_loop(Socket, Handler, Context, Buffer);
 		% Invalid Frame
 		?UNFRAME_ERROR(_, _) ->
 			Handler ! ?RECV_CLOSE;
@@ -379,15 +375,15 @@ listen_end_loop(_) ->
 %------------------------------------------------------------------------------
 accept_socket(TCPListen, SocketOwner, Timeout) ->
 	case socket:accept(TCPListen, Timeout) of
-		{ok, TCPSocket} ->
-			accept_request(TCPSocket, SocketOwner);
+		{ok, Socket} ->
+			accept_request(Socket, SocketOwner);
 		{error, Reason} ->
 			SocketOwner ! ?ACCEPT_RES_ERROR(Reason)
 	end.
 %------------------------------------------------------------------------------
-accept_request(TCPSocket, SocketOwner) ->
+accept_request(Socket, SocketOwner) ->
 	Reply = 
-	case catch(accept_request_1(TCPSocket, SocketOwner)) of
+	case catch(accept_request_1(Socket, SocketOwner)) of
 		{error, {error, Reason}} ->
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {{case_clause, Reason}, _}} ->
@@ -399,9 +395,9 @@ accept_request(TCPSocket, SocketOwner) ->
 	end,
 	SocketOwner ! Reply.
 %------------------------------------------------------------------------------
-accept_request_1(TCPSocket, SocketOwner) ->
-	RequestHeader = receive_header(TCPSocket),
-	Key3 = receive_key3(TCPSocket),
+accept_request_1(Socket, SocketOwner) ->
+	RequestHeader = receive_header(Socket),
+	Key3 = receive_key3(Socket),
 
 	Request = ws_header:parse(RequestHeader ++ Key3),
 	Response = hixie76_lib:gen_response(Request),
@@ -409,23 +405,23 @@ accept_request_1(TCPSocket, SocketOwner) ->
 	SubProtocol = hixie76_lib:get_subprotocol(Response),
 
 	ResponseHeader = ws_header:to_string(Response),
-	case socket:send(TCPSocket, ResponseHeader) of
+	case socket:send(Socket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(
-				TCPSocket, SocketOwner, 
+				Socket, SocketOwner, 
 				{Request, Response, SubProtocol});
 		{error, Reason} ->
 			erlang:error(Reason)
 	end.
 %------------------------------------------------------------------------------
-receive_key3(TCPSocket) ->
-	receive_len(TCPSocket, ?KEY3_LEN, []).
+receive_key3(Socket) ->
+	receive_len(Socket, ?KEY3_LEN, []).
 %------------------------------------------------------------------------------
-accept_socket_ok(TCPSocket, SocketOwner, {Request, Response, SubProtocol}) ->
+accept_socket_ok(Socket, SocketOwner, {Request, Response, SubProtocol}) ->
 	HandlerParam = 
 		[{request, Request},
 		 {response, Response}, 
 		 {subprotocol, SubProtocol}],
-	create_websocket_handler(TCPSocket, HandlerParam, SocketOwner).
+	create_websocket_handler(Socket, HandlerParam, SocketOwner).
 %------------------------------------------------------------------------------
 
