@@ -84,8 +84,10 @@ recv(WebSocket) ->
 recv(?WS_FMT(Handler), Timeout) ->
 	Handler ! ?RECV_REQ(Timeout),
 	receive
-		?RECV_RES(Handler, Data) -> 
-			{ok, Data}
+		?RECV_RES_OK(Handler, Data) -> 
+			{ok, Data};
+		?RECV_RES_ERROR(Handler, Reason) ->
+			{error, Reason}
 		after 2000 ->
 			{error, timeout}
 	end.
@@ -252,41 +254,61 @@ main_load([_|Parameter]) ->
 	main_load(Parameter).
 %------------------------------------------------------------------------------
 main_loop(Socket, Owner, Receiver, MailBox) ->
-	receive
-		% WebSocket API
-		?SEND_REQ(From, Data) ->
-			Reply = send_frame(Socket, Data),
-			From ! Reply,
-			main_loop(Socket, Owner, Receiver, MailBox);
-		?RECV_REQ(From, _Timeout) ->
-			{Reply, NewMailBox} = recv_frame(MailBox),
-			From ! Reply,
-			main_loop(Socket, Owner, Receiver, NewMailBox);
-		?CHANGE_OWNER(Owner, NewOwner) ->
-			Owner ! ?CHANGE_OWNER_OK,
-			main_loop(Socket, NewOwner, Receiver, MailBox);
-		?CHANGE_OWNER(From, _) ->
-			From ! ?CHANGE_OWNER_ERROR(not_owner),
-			main_loop(Socket, Owner, Receiver, MailBox);
-		?CLOSE_REQ ->
-			socket:close(Socket),
-			Owner ! ?WS_CLOSE_SIGNAL,
-			main_end_loop(MailBox);
-		% Receiver Update
-		?RECV_NEW(Receiver, Msg) ->
-			main_loop(Socket, Owner, Receiver, queue:in(Msg, MailBox));
-		?RECV_CLOSE(Receiver) ->
-			socket:close(Socket),
-			Owner ! ?WS_CLOSE_SIGNAL,
-			main_end_loop(MailBox);
-		% Other
-		X ->
-			?print("main_loop", X),
-			main_loop(Socket, Owner, Receiver, MailBox)
-	end.
+receive
+	% WebSocket API
+	?SEND_REQ(From, Data) ->
+		Reply = send_frame(Socket, Data),
+		From ! Reply,
+		main_loop(Socket, Owner, Receiver, MailBox);
+	?RECV_REQ(From, _Timeout) ->
+		{Reply, NewMailBox} = recv_frame(MailBox),
+		From ! Reply,
+		main_loop(Socket, Owner, Receiver, NewMailBox);
+	?CHANGE_OWNER(Owner, NewOwner) ->
+		Owner ! ?CHANGE_OWNER_OK,
+		main_loop(Socket, NewOwner, Receiver, MailBox);
+	?CHANGE_OWNER(From, _) ->
+		From ! ?CHANGE_OWNER_ERROR(not_owner),
+		main_loop(Socket, Owner, Receiver, MailBox);
+	?CLOSE_REQ ->
+		socket:close(Socket),
+		Owner ! ?WS_CLOSE_SIGNAL,
+		main_end_loop(MailBox);
+	% Receiver Update
+	?RECV_NEW(Receiver, Msg) ->
+		main_loop(Socket, Owner, Receiver, queue:in(Msg, MailBox));
+	?RECV_CLOSE(Receiver) ->
+		socket:close(Socket),
+		Owner ! ?WS_CLOSE_SIGNAL,
+		main_end_loop(MailBox);
+	% Other
+	X ->
+		?print("main_loop", X),
+		main_loop(Socket, Owner, Receiver, MailBox)
+end.
 %------------------------------------------------------------------------------
 main_end_loop(MailBox) ->
-	?print("terminate", MailBox).
+receive
+	?ACCEPT_REQ(From, _) ->
+		From ! ?ACCEPT_RES_ERROR(closed),
+		main_end_loop(MailBox);
+	?RECV_REQ(From, _) ->
+		case queue:out(MailBox) of
+			{empty, NewMailBox} ->
+				From ! ?RECV_RES_ERROR(closed);
+			{{value, Reply}, NewMailBox} ->
+				From ! ?RECV_RES_OK(Reply)
+		end,
+		main_end_loop(NewMailBox);
+	?SEND_REQ(From, _) ->
+		From !?SEND_RES_ERROR(closed),
+		main_end_loop(MailBox);
+	?CHANGE_OWNER(From, _) ->
+		From ! {error, closed},
+		main_end_loop(MailBox);
+	_ ->
+		main_end_loop(MailBox)
+end.
 %------------------------------------------------------------------------------
 send_frame(Socket, Data) ->
 	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
@@ -298,9 +320,9 @@ send_frame(Socket, Data) ->
 recv_frame(MailBox) ->
 	case queue:out(MailBox) of
 		{{value, Message}, NewMailBox} ->
-			{?RECV_RES(Message), NewMailBox};
+			{?RECV_RES_OK(Message), NewMailBox};
 		{empty, MailBox} ->
-			{?RECV_RES(empty), MailBox}
+			{?RECV_RES_OK(empty), MailBox}
 	end.
 %------------------------------------------------------------------------------
 receiver_start(Socket, Handler) ->
@@ -351,27 +373,27 @@ listen_start(Port, Owner) ->
 	end.
 %------------------------------------------------------------------------------
 listen_loop(TCPListen, Owner) ->
-	receive
-		?ACCEPT_REQ(From, Timeout) ->
-			accept_socket(TCPListen, From, Timeout),
-			listen_loop(TCPListen, Owner);
-		?CHANGE_OWNER(Owner, NewOwner) ->
-			Owner ! ?CHANGE_OWNER_OK,
-			listen_loop(TCPListen, NewOwner);
-		?CHANGE_OWNER(From, _) ->
-			From ! ?CHANGE_OWNER_ERROR(not_owner),
-			listen_loop(TCPListen, Owner);
-		?CLOSE_REQ ->
-			socket:close(TCPListen),
-			Owner ! ?WS_CLOSE_SIGNAL,
-			listen_end_loop(Owner);
-		X ->
-			?print("listen_loop", X),
-			listen_loop(TCPListen, Owner)
-	end.
+receive
+	?ACCEPT_REQ(From, Timeout) ->
+		accept_socket(TCPListen, From, Timeout),
+		listen_loop(TCPListen, Owner);
+	?CHANGE_OWNER(Owner, NewOwner) ->
+		Owner ! ?CHANGE_OWNER_OK,
+		listen_loop(TCPListen, NewOwner);
+	?CHANGE_OWNER(From, _) ->
+		From ! ?CHANGE_OWNER_ERROR(not_owner),
+		listen_loop(TCPListen, Owner);
+	?CLOSE_REQ ->
+		socket:close(TCPListen),
+		Owner ! ?WS_CLOSE_SIGNAL,
+		listen_end_loop(Owner);
+	X ->
+		?print("listen_loop", X),
+		listen_loop(TCPListen, Owner)
+end.
 %------------------------------------------------------------------------------			
 listen_end_loop(_) ->
-	ok.
+	main_end_loop(queue:new()).
 %------------------------------------------------------------------------------
 accept_socket(TCPListen, SocketOwner, Timeout) ->
 	case socket:accept(TCPListen, Timeout) of

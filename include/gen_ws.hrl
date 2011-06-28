@@ -57,8 +57,11 @@
 -define(ACCEPT_RES_ERROR(From, Reason), {From, accept_error, Reason}).
 -define(ACCEPT_RES_ERROR(Reason), ?ACCEPT_RES_ERROR(self(), Reason)).
 
--define(RECV_RES(From, Data), {From, recv, Data}).
--define(RECV_RES(Data), ?RECV_RES(self(), Data)).
+-define(RECV_RES_OK(From, Data), {From, recv_ok, Data}).
+-define(RECV_RES_OK(Data), ?RECV_RES_OK(self(), Data)).
+
+-define(RECV_RES_ERROR(From, Reason), {From, recv_error, Reason}).
+-define(RECV_RES_ERROR(Reason), ?RECV_RES_ERROR(self(), Reason)).
 
 -define(SEND_RES_OK(From),    {From, send, ok}).
 -define(SEND_RES_OK, ?SEND_RES_OK(self())).
