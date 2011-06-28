@@ -20,7 +20,7 @@
 -import(socket).
 %------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
--export([accept/1, accept/2, recv/1, recv/2, send/2, close/1]).
+-export([accept/1, accept/2, recv/1, recv/2, send/2, send/3, close/1]).
 -export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
@@ -88,23 +88,27 @@ recv(?WS_FMT(Handler), Timeout) ->
 			{ok, Data};
 		?RECV_RES_ERROR(Handler, Reason) ->
 			{error, Reason}
-		after 2000 ->
-			{error, timeout}
+	after Timeout ->
+		{error, timeout}
 	end.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
-send(?WS_FMT(Handler), Data) when is_list(Data) ->
+send(WebSocket, Data) ->
+	send(WebSocket, Data, infinity).
+%------------------------------------------------------------------------------
+send(?WS_FMT(Handler), Data, Timeout) when is_list(Data) ->
 	Handler ! ?SEND_REQ(Data),
 	receive
-		?SEND_RES_OK(Handler) -> ok;
+		?SEND_RES_OK(Handler) -> 
+			ok;
 		?SEND_RES_ERROR(Handler, Reason) -> 
 			{error, Reason}
-		after 2000 ->
-			{error, timeout}
+	after Timeout ->
+		{error, timeout}
 	end;
-send(WebSocket, Data) when is_binary(Data) ->
-	send(WebSocket, binary_to_list(Data));
-send(_, _) ->
+send(WebSocket, Data, Timeout) when is_binary(Data) ->
+	{error, einval};
+send(_, _, _) ->
 	{error, einval}.
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
@@ -177,44 +181,29 @@ receive_header(Socket) ->
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_header_loop(Socket, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR} ->
-			receive_header_loop_1(
-				Socket, ?CR ++ RevBuffer);
-		{ok, Char} ->
-			receive_header_loop(
-				Socket, Char ++ RevBuffer)
+		{ok, ?CR}  -> receive_header_loop_1(Socket, ?CR++RevBuffer);
+		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta LFCRLF
 receive_header_loop_1(Socket, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?LF} ->
-			receive_header_loop_2(
-				Socket, ?LF ++ RevBuffer);
-		{ok, Char} ->
-			receive_header_loop(
-				Socket, Char ++ RevBuffer)
+		{ok, ?LF}  -> receive_header_loop_2(Socket, ?LF++RevBuffer);
+		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta CRLF
 receive_header_loop_2(Socket, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR} ->
-			receive_header_loop_3(
-				Socket, ?CR ++ RevBuffer);
-		{ok, Char} ->
-			receive_header_loop(
-				Socket, Char ++ RevBuffer)
+		{ok, ?CR}  -> receive_header_loop_3(Socket, ?CR++RevBuffer);
+		{ok, Char} -> receive_header_loop(Socket,   Char++RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 % Falta LF
 receive_header_loop_3(Socket, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?LF} ->
-			lists:reverse(?LF ++ RevBuffer);
-		{ok, Char} ->
-			receive_header_loop(
-				Socket, Char ++ RevBuffer)
+		{ok, ?LF}  -> lists:reverse(?LF++RevBuffer);
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 receive_response_solution(Socket) ->
@@ -224,8 +213,7 @@ receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_len(Socket, Len, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, Byte} -> receive_len(
-				Socket, Len-1, Byte ++ RevBuffer)
+		{ok, Byte} -> receive_len(Socket, Len-1, Byte++RevBuffer)
 	end.
 %------------------------------------------------------------------------------
 create_websocket_handler(Socket, HandlerParameter) ->
