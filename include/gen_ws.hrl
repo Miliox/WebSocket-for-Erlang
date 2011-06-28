@@ -74,7 +74,6 @@
 
 %------------------------------------------------------------------------------
 % TCP Settings
--define(TCP_OPT, [list, {packet, raw}, {active, false}]).
 %-----------------------------------------------------------------------------
 % TCPSocket Active Messages
 -define(TCP_RECV_SIGNAL(Socket, Packet),  {tcp, Socket, Packet}).

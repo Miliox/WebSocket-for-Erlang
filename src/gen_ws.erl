@@ -15,8 +15,9 @@
 -include("ws_frame.hrl").
 %------------------------------------------------------------------------------
 -import(ws_url).
--import(gen_tcp).
+%-import(gen_tcp).
 -import(hixie76_lib).
+-import(socket).
 %------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
 -export([accept/1, accept/2, recv/1, recv/2, send/2, close/1]).
@@ -28,10 +29,7 @@ connect(Url) ->
 connect(Url, Options) ->
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 	
-	case Mode of
-		normal -> normal_connect(Url, Address, Port, Options);
-		secure -> {error, notsupport}
-	end.
+	connect_1(Mode, Url, Address, Port, Options).
 %------------------------------------------------------------------------------
 get_opt(Key, Dict) ->
 	case orddict:find(Key, Dict) of
@@ -121,12 +119,12 @@ getstate(_WebSocket) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-normal_connect(Url, Address, Port, Options) ->
+connect_1(Mode, Url, Address, Port, Options) ->
 	Origin = get_opt(origin, Options),
 	Timeout = get_opt(timeout, Options),
 	SubProtocol = get_opt(subprotocol, Options),
 
-	case gen_tcp:connect(Address, Port, ?TCP_OPT, Timeout) of
+	case socket:connect(Mode, Address, Port, Timeout) of
 		{ok, TCPSocket} ->
 			make_handshake(Url, Origin, SubProtocol, TCPSocket);
 		Error ->
@@ -139,7 +137,7 @@ make_handshake(Url, Origin, SubProtocol, TCPSocket) ->
 
 	HandlerParameter = [{url, Url}, {origin, Origin}, {request, Request}],
 
-	case gen_tcp:send(TCPSocket, RequestHeader) of
+	case socket:send(TCPSocket, RequestHeader) of
 		ok ->
 			receive_response(TCPSocket, Answer, HandlerParameter);
 		Error ->
@@ -180,7 +178,7 @@ receive_header(TCPSocket) ->
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_header_loop(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_1(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -191,7 +189,7 @@ receive_header_loop(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LFCRLF
 receive_header_loop_1(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			receive_header_loop_2(
 				TCPSocket, ?LF ++ RevBuffer);
@@ -202,7 +200,7 @@ receive_header_loop_1(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta CRLF
 receive_header_loop_2(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR} ->
 			receive_header_loop_3(
 				TCPSocket, ?CR ++ RevBuffer);
@@ -213,7 +211,7 @@ receive_header_loop_2(TCPSocket, RevBuffer) ->
 %------------------------------------------------------------------------------
 % Falta LF
 receive_header_loop_3(TCPSocket, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF} ->
 			lists:reverse(?LF ++ RevBuffer);
 		{ok, Char} ->
@@ -227,7 +225,7 @@ receive_response_solution(TCPSocket) ->
 receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_len(TCPSocket, Len, RevBuffer) ->
-	case gen_tcp:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+	case socket:recv(TCPSocket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, Byte} -> receive_len(
 				TCPSocket, Len-1, Byte ++ RevBuffer)
 	end.
@@ -236,7 +234,7 @@ create_websocket_handler(TCPSocket, HandlerParameter) ->
 	create_websocket_handler(TCPSocket, HandlerParameter, self()).
 create_websocket_handler(TCPSocket, HandlerParameter, Owner) ->
 	HandlerPid = spawn(?MODULE, main_start, [TCPSocket, Owner, HandlerParameter]),
-	gen_tcp:controlling_process(TCPSocket, HandlerPid),
+	socket:controlling_process(TCPSocket, HandlerPid),
 
 	WebSocket = ?WS_FMT(HandlerPid),
 
@@ -275,14 +273,14 @@ main_loop(TCPSocket, Owner, Receiver, MailBox) ->
 			From ! ?CHANGE_OWNER_ERROR(not_owner),
 			main_loop(TCPSocket, Owner, Receiver, MailBox);
 		?CLOSE_REQ ->
-			gen_tcp:close(TCPSocket),
+			socket:close(TCPSocket),
 			Owner ! ?WS_CLOSE_SIGNAL,
 			main_end_loop(MailBox);
 		% Receiver Update
 		?RECV_NEW(Receiver, Msg) ->
 			main_loop(TCPSocket, Owner, Receiver, queue:in(Msg, MailBox));
 		?RECV_CLOSE(Receiver) ->
-			gen_tcp:close(TCPSocket),
+			socket:close(TCPSocket),
 			Owner ! ?WS_CLOSE_SIGNAL,
 			main_end_loop(MailBox);
 		% Other
@@ -296,7 +294,7 @@ main_end_loop(MailBox) ->
 %------------------------------------------------------------------------------
 send_frame(TCPSocket, Data) ->
 	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
-	case gen_tcp:send(TCPSocket, Frame) of
+	case socket:send(TCPSocket, Frame) of
 		ok -> ?SEND_RES_OK;
 		{error, Reason} -> ?SEND_RES_ERROR(Reason)
 	end.
@@ -313,7 +311,7 @@ receiver_start(TCPSocket, Handler) ->
 	receiver_loop(TCPSocket, Handler, nil, []).
 %------------------------------------------------------------------------------
 receiver_loop(TCPSocket, Handler, Context, []) ->
-	case gen_tcp:recv(TCPSocket, ?ALL) of
+	case socket:recv(TCPSocket, ?ALL) of
 		{ok, Stream} ->
 			receiver_unframe(TCPSocket, Handler, Context, Stream);
 		{error, closed} ->
@@ -348,7 +346,7 @@ receiver_unframe(TCPSocket, Handler, Context, Stream) ->
 	end.
 %------------------------------------------------------------------------------
 listen_start(Port, Owner) ->
-	case gen_tcp:listen(Port, ?TCP_OPT) of
+	case socket:listen(Port) of
 		{ok, TCPListen} ->
 			Owner ! {self(), ok},
 			listen_loop(TCPListen, Owner);
@@ -368,7 +366,7 @@ listen_loop(TCPListen, Owner) ->
 			From ! ?CHANGE_OWNER_ERROR(not_owner),
 			listen_loop(TCPListen, Owner);
 		?CLOSE_REQ ->
-			gen_tcp:close(TCPListen),
+			socket:close(TCPListen),
 			Owner ! ?WS_CLOSE_SIGNAL,
 			listen_end_loop(Owner);
 		X ->
@@ -380,7 +378,7 @@ listen_end_loop(_) ->
 	ok.
 %------------------------------------------------------------------------------
 accept_socket(TCPListen, SocketOwner, Timeout) ->
-	case gen_tcp:accept(TCPListen, Timeout) of
+	case socket:accept(TCPListen, Timeout) of
 		{ok, TCPSocket} ->
 			accept_request(TCPSocket, SocketOwner);
 		{error, Reason} ->
@@ -411,7 +409,7 @@ accept_request_1(TCPSocket, SocketOwner) ->
 	SubProtocol = hixie76_lib:get_subprotocol(Response),
 
 	ResponseHeader = ws_header:to_string(Response),
-	case gen_tcp:send(TCPSocket, ResponseHeader) of
+	case socket:send(TCPSocket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(
 				TCPSocket, SocketOwner, 
