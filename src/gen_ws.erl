@@ -9,15 +9,14 @@
 
 -module(gen_ws).
 -author("elmiliox@gmail.com").
--vsn(3).
+-vsn(4).
 %------------------------------------------------------------------------------
 -include("gen_ws.hrl").
 -include("ws_frame.hrl").
 %------------------------------------------------------------------------------
--import(ws_url).
-%-import(gen_tcp).
--import(hixie76_lib).
 -import(socket).
+-import(ws_url).
+-import(hixie76_lib).
 %------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
 -export([accept/1, accept/2, recv/1, recv/2, send/2, send/3, close/1]).
@@ -436,10 +435,8 @@ accept_request_1(Socket, SocketOwner) ->
 	RequestHeader = receive_header(Socket),
 	Key3 = receive_key3(Socket),
 
-	Mode = socket:getmode(Socket),
-
 	Request = ws_header:parse(RequestHeader ++ Key3),
-	Response = hixie76_lib:gen_response(Request, Mode),
+	Response = hixie76_lib:gen_response(Request, socket:getmode(Socket)),
 
 	SubProtocol = hixie76_lib:get_subprotocol(Response),
 
