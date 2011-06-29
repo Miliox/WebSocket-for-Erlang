@@ -25,15 +25,19 @@
 %% Cria um WebSocket a ser usado pelo Cliente
 connect(Url) ->
 	connect(Url, ?DEF_CON_OPT).
-connect(Url, Options) ->
-	Origin = get_opt(origin, Options),
+connect(Url, Opt) ->
+	Options = lists:sort(Opt),
+
+	Active  = get_opt(active, Options),
+	Origin  = get_opt(origin, Options),
 	Timeout = get_opt(timeout, Options),
 	SubProtocol = get_opt(subprotocol, Options),
+
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 
 	case socket:connect(Mode, Address, Port, Timeout) of
 		{ok, Socket} ->
-			make_handshake(Url, Origin, SubProtocol, Socket);
+			make_handshake(Url, Origin, SubProtocol, Active, Socket);
 		Error ->
 			Error
 	end.
@@ -49,6 +53,7 @@ get_opt(Key, Dict) ->
 get_default(origin) -> ?DEF_ORIGIN;
 get_default(timeout) -> ?DEF_TIMEOUT;
 get_default(subprotocol) -> ?DEF_SUBP;
+get_default(active) -> true;
 get_default(_) -> erlang:error(badarg).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
@@ -134,11 +139,15 @@ getstate(_WebSocket) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-make_handshake(Url, Origin, SubProtocol, Socket) ->
+make_handshake(Url, Origin, SubProtocol, Active, Socket) ->
 	{Request, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
 	RequestHeader = ws_header:to_string(Request),
 
-	HandlerParameter = [{url, Url}, {origin, Origin}, {request, Request}],
+	HandlerParameter = [
+		{url, Url}, 
+		{origin, Origin}, 
+		{request, Request}, 
+		{active, Active}],
 
 	case socket:send(Socket, RequestHeader) of
 		ok ->
@@ -284,7 +293,8 @@ receive
 		main_end_loop(MailBox);
 	% Receiver Update
 	?RECV_NEW(Receiver, Msg) ->
-		main_loop(Socket, Owner, Receiver, queue:in(Msg, MailBox));
+		NewMailBox = main_loop_recv(Msg, Owner, MailBox),
+		main_loop(Socket, Owner, Receiver, NewMailBox);
 	?RECV_CLOSE(Receiver) ->
 		socket:close(Socket),
 		Owner ! ?WS_CLOSE_SIGNAL,
@@ -294,6 +304,16 @@ receive
 		?print("main_loop", X),
 		main_loop(Socket, Owner, Receiver, MailBox)
 end.
+%------------------------------------------------------------------------------
+main_loop_recv(Msg, Owner, MailBox) ->
+	case get(active) of
+		false ->
+			queue:in(Msg, MailBox);
+		True ->
+			?print(True),
+			Owner ! ?WS_RECV_SIGNAL(Msg), 
+			MailBox
+	end.
 %------------------------------------------------------------------------------
 main_end_loop(MailBox) ->
 receive
