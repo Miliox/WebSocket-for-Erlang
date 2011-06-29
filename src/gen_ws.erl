@@ -151,8 +151,10 @@ make_handshake(Url, Origin, SubProtocol, Socket) ->
 receive_response(Socket, Answer, HandlerParameter) ->
 	case catch(receive_response_1(Socket, Answer, HandlerParameter)) of
 		{'EXIT', {{case_clause, Error}, _}} ->
+			socket:close(Socket),
 			{error, Error};
 		{'EXIT', {Reason, _}} ->
+			socket:close(Socket),
 			{error, Reason};
 		Sucess ->
 			Sucess
@@ -409,10 +411,13 @@ accept_request(Socket, SocketOwner) ->
 	Reply = 
 	case catch(accept_request_1(Socket, SocketOwner)) of
 		{error, {error, Reason}} ->
+			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {{case_clause, Reason}, _}} ->
+			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {Reason, _}} ->
+			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		WebSocket ->
 			?ACCEPT_RES_OK(WebSocket)
