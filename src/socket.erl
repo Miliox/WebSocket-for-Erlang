@@ -18,13 +18,13 @@
 -import(gen_tcp).
 %------------------------------------------------------------------------------
 -export([accept/2, close/1, listen/2, recv/2, recv/3, send/2]).
--export([controlling_process/2]).
+-export([controlling_process/2, getmode/1]).
 %------------------------------------------------------------------------------
 accept(?SOCKET_TCP(Socket), Timeout) ->
 	wrap_tcp(gen_tcp:accept(Socket, Timeout));
 accept(?SOCKET_SSL(Socket), Timeout) ->
 	Accept = case ssl:transport_accept(Socket, Timeout) of
-		{ok, SSLSocket}=Ok ->
+		{ok, SSLSocket}=Ok -> 
 			case ssl:ssl_accept(SSLSocket, Timeout) of
 				ok -> Ok;
 				Error -> Error
@@ -64,7 +64,7 @@ listen(normal, Port) ->
 	wrap_tcp(gen_tcp:listen(Port, ?TCP_OPT));
 listen(secure, Port) ->
 	ssl:start(),
-	wrap_ssl(ssl:listen(Port, ?TCP_OPT)).
+	wrap_ssl(ssl:listen(Port, ?SSL_OPT)).
 %------------------------------------------------------------------------------
 recv(Socket, Length) ->
 	recv(Socket, Length, infinity).
@@ -84,3 +84,7 @@ controlling_process(?SOCKET_TCP(Socket), NewOwner) ->
 controlling_process(?SOCKET_SSL(Socket), NewOwner) ->
 	ssl:controlling_process(Socket, NewOwner).
 %------------------------------------------------------------------------------
+getmode(?SOCKET_TCP(_)) ->
+	normal;
+getmode(?SOCKET_SSL(_)) ->
+	secure.

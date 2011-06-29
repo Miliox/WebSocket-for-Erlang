@@ -26,5 +26,7 @@
 
 % Socket Configuration
 -define(TCP_OPT, [list, {packet, raw}, {active, false}]).
+-define(SSL_OPT, ?TCP_OPT ++ 
+	[{certfile, "doc/certificate.pem"}, {keyfile, "doc/key.pem"}]).
 
 

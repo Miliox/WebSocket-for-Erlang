@@ -23,7 +23,7 @@
 -import(ws_header).
 -import(ws_url).
 %------------------------------------------------------------------------------
--export([gen_request/2, gen_request/3, gen_response/1]).
+-export([gen_request/2, gen_request/3, gen_response/1, gen_response/2]).
 -export([make_trial/0, resolve_trial/1]).
 -export([encode_key/1, encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
@@ -71,17 +71,19 @@ gen_request_2(Request, K3, Solution) ->
 	{Request ++ [ {undefined, []}, {undefined, K3} ], Solution}.
 %------------------------------------------------------------------------------
 gen_response(Request) ->
-	case catch(gen_response_1(Request)) of
+	gen_response(Request, normal).
+gen_response(Request, Mode) ->
+	case catch(gen_response_1(Request, Mode)) of
 		Response when is_list(Response) ->
 			Response;
 		_ ->
 			{error, invalid_request}
 	end.
 %------------------------------------------------------------------------------
-gen_response_1(Request) ->
+gen_response_1(Request, Mode) ->
 	{found, Origin} = ws_header:find(?HIXIE76_ORIGIN_REQ, Request),
 	
-	Location = location_from_request(Request),
+	Location = location_from_request(Mode, Request),
 	Response = [
 		{?HIXIE76_STATUS_CODE,   "101"},
 		{?HIXIE76_REASON_PHRASE, ?HIXIE76_REASON_VAL},
@@ -239,8 +241,11 @@ random_byte() ->
 			Byte
 	end.
 %------------------------------------------------------------------------------
-location_from_request(Request) ->
-	Scheme = "ws://",
+location_from_request(Mode, Request) ->
+	Scheme = case Mode of
+		normal -> "ws://";
+		secure -> "wss://"
+	end,
 	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
 	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
 

@@ -423,8 +423,10 @@ accept_request_1(Socket, SocketOwner) ->
 	RequestHeader = receive_header(Socket),
 	Key3 = receive_key3(Socket),
 
+	Mode = socket:getmode(Socket),
+
 	Request = ws_header:parse(RequestHeader ++ Key3),
-	Response = hixie76_lib:gen_response(Request),
+	Response = hixie76_lib:gen_response(Request, Mode),
 
 	SubProtocol = hixie76_lib:get_subprotocol(Response),
 
