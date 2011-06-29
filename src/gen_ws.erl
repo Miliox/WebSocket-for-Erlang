@@ -54,9 +54,11 @@ get_default(_) -> erlang:error(badarg).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
-	listen(Port, []).
-listen(Port, _Options) ->
-	ListenPid = spawn(?MODULE, listen_start, [Port, self()]),
+	listen(Port, normal).
+listen(Port, Mode) ->
+	listen(Port, Mode, []).
+listen(Port, Mode,_Options) ->
+	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
 	receive
 		{ListenPid, ok} ->
 			{ok, ?WSL_FMT(ListenPid)};
@@ -363,40 +365,40 @@ receiver_unframe(Socket, Handler, Context, Stream) ->
 			?print("error", X)
 	end.
 %------------------------------------------------------------------------------
-listen_start(Port, Owner) ->
-	case socket:listen(Port) of
-		{ok, TCPListen} ->
+listen_start(Port, Mode, Owner) ->
+	case socket:listen(Mode, Port) of
+		{ok, Listen} ->
 			Owner ! {self(), ok},
-			listen_loop(TCPListen, Owner);
+			listen_loop(Listen, Owner);
 		{error, Reason} ->
 			Owner ! {self(), Reason}
 	end.
 %------------------------------------------------------------------------------
-listen_loop(TCPListen, Owner) ->
+listen_loop(Listen, Owner) ->
 receive
 	?ACCEPT_REQ(From, Timeout) ->
-		accept_socket(TCPListen, From, Timeout),
-		listen_loop(TCPListen, Owner);
+		accept_socket(Listen, From, Timeout),
+		listen_loop(Listen, Owner);
 	?CHANGE_OWNER(Owner, NewOwner) ->
 		Owner ! ?CHANGE_OWNER_OK,
-		listen_loop(TCPListen, NewOwner);
+		listen_loop(Listen, NewOwner);
 	?CHANGE_OWNER(From, _) ->
 		From ! ?CHANGE_OWNER_ERROR(not_owner),
-		listen_loop(TCPListen, Owner);
+		listen_loop(Listen, Owner);
 	?CLOSE_REQ ->
-		socket:close(TCPListen),
+		socket:close(Listen),
 		Owner ! ?WS_CLOSE_SIGNAL,
 		listen_end_loop(Owner);
 	X ->
 		?print("listen_loop", X),
-		listen_loop(TCPListen, Owner)
+		listen_loop(Listen, Owner)
 end.
 %------------------------------------------------------------------------------			
 listen_end_loop(_) ->
 	main_end_loop(queue:new()).
 %------------------------------------------------------------------------------
-accept_socket(TCPListen, SocketOwner, Timeout) ->
-	case socket:accept(TCPListen, Timeout) of
+accept_socket(Listen, SocketOwner, Timeout) ->
+	case socket:accept(Listen, Timeout) of
 		{ok, Socket} ->
 			accept_request(Socket, SocketOwner);
 		{error, Reason} ->

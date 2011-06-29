@@ -17,14 +17,22 @@
 -import(ssl).
 -import(gen_tcp).
 %------------------------------------------------------------------------------
--export([accept/2, close/1, listen/1, recv/2, recv/3, send/2]).
+-export([accept/2, close/1, listen/2, recv/2, recv/3, send/2]).
 -export([controlling_process/2]).
 %------------------------------------------------------------------------------
 accept(?SOCKET_TCP(Socket), Timeout) ->
 	wrap_tcp(gen_tcp:accept(Socket, Timeout));
-accept(?SOCKET_SSL(_Socket), _Timeout) ->
-	erlang:throw(todo).
-	%wrap_ssl(ssl:accept(Socket, Timeout)).
+accept(?SOCKET_SSL(Socket), Timeout) ->
+	Accept = case ssl:transport_accept(Socket, Timeout) of
+		{ok, SSLSocket}=Ok ->
+			case ssl:ssl_accept(SSLSocket, Timeout) of
+				ok -> Ok;
+				Error -> Error
+			end;
+		Error ->
+			Error
+	end,
+	wrap_ssl(Accept).
 %------------------------------------------------------------------------------
 close(?SOCKET_TCP(Socket)) ->
 	gen_tcp:close(Socket);
@@ -52,11 +60,11 @@ wrap_ssl({ok, SSLSocket}) ->
 wrap_ssl(Error) ->
 	Error.
 %------------------------------------------------------------------------------
-listen(?SOCKET_TCP(Listen)) ->
-	gen_tcp:listen(Listen, ?TCP_OPT);
-listen(?SOCKET_SSL(Listen)) ->
+listen(normal, Port) ->
+	wrap_tcp(gen_tcp:listen(Port, ?TCP_OPT));
+listen(secure, Port) ->
 	ssl:start(),
-	ssl:listen(Listen, ?TCP_OPT).
+	wrap_ssl(ssl:listen(Port, ?TCP_OPT)).
 %------------------------------------------------------------------------------
 recv(Socket, Length) ->
 	recv(Socket, Length, infinity).
