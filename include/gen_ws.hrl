@@ -93,3 +93,9 @@
 -define(RECV_CLOSE(From), {From, receiver_closed}).
 -define(RECV_CLOSE, ?RECV_CLOSE(self())).
 %------------------------------------------------------------------------------
+-define(RESPONSE_ERROR,
+	"HTTP/1.1 400 Bad Request\r\n" ++
+	"Content-Type: text/plain; charset=utf-8\r\n" ++
+	"Server: ErlangWebSocket1.0\r\n" ++
+	"Content-Length: 26\r\n\r\nOnly WebSocket Connections").
+%------------------------------------------------------------------------------

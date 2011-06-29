@@ -187,7 +187,8 @@ receive_header_loop(Socket, RevBuffer, Len)
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR}  -> receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> erlang:error(timeout)
 	end;
 receive_header_loop(_, _, _) ->
 	erlang:error(header_overflow).
@@ -197,7 +198,8 @@ receive_header_loop_1(Socket, RevBuffer, Len)
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF}  -> receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> erlang:error(timeout)
 	end;
 receive_header_loop_1(_, _, _) ->
 	erlang:error(header_overflow).
@@ -207,7 +209,8 @@ receive_header_loop_2(Socket, RevBuffer, Len)
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?CR}  -> receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> erlang:error(timeout)
 	end;
 receive_header_loop_2(_, _, _) ->
 	erlang:error(header_overflow).
@@ -217,7 +220,8 @@ receive_header_loop_3(Socket, RevBuffer, Len)
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, ?LF}  -> lists:reverse(?LF++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1)
+		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> erlang:error(timeout)
 	end;
 receive_header_loop_3(_, _, _) ->
 	erlang:error(header_overflow).
@@ -229,7 +233,8 @@ receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_len(Socket, Len, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, Byte} -> receive_len(Socket, Len-1, Byte++RevBuffer)
+		{ok, Byte} -> receive_len(Socket, Len-1, Byte++RevBuffer);
+		_ -> erlang:error(timeout)
 	end.
 %------------------------------------------------------------------------------
 create_websocket_handler(Socket, HandlerParameter) ->
@@ -411,12 +416,15 @@ accept_request(Socket, SocketOwner) ->
 	Reply = 
 	case catch(accept_request_1(Socket, SocketOwner)) of
 		{error, {error, Reason}} ->
+			socket:send(Socket, ?RESPONSE_ERROR),
 			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {{case_clause, Reason}, _}} ->
+			socket:send(Socket, ?RESPONSE_ERROR),
 			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		{'EXIT', {Reason, _}} ->
+			socket:send(Socket, ?RESPONSE_ERROR),
 			socket:close(Socket),
 			?ACCEPT_RES_ERROR(Reason);
 		WebSocket ->
