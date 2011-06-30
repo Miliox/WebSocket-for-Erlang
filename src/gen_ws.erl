@@ -6,7 +6,7 @@
 %%            ou gen_udp.
 %% Criado: 05/17/11 20:00:39 (HPC)
 %% Copyright Emiliano@2011
-
+%------------------------------------------------------------------------------
 -module(gen_ws).
 -author("elmiliox@gmail.com").
 -vsn(4).
@@ -20,7 +20,6 @@
 %------------------------------------------------------------------------------
 -export([connect/1, connect/2, listen/2]).
 -export([accept/1, accept/2, recv/1, recv/2, send/2, send/3, close/1]).
--export([geturl/1, getsubprotocol/1, getstate/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
 connect(Url) ->
@@ -41,20 +40,6 @@ connect(Url, Opt) ->
 		Error ->
 			Error
 	end.
-%------------------------------------------------------------------------------
-get_opt(Key, Dict) ->
-	case orddict:find(Key, Dict) of
-		{ok, Value} -> 
-			Value;
-		error -> 
-			get_default(Key)
-	end.
-%------------------------------------------------------------------------------
-get_default(origin) -> ?DEF_ORIGIN;
-get_default(timeout) -> ?DEF_TIMEOUT;
-get_default(subprotocol) -> ?DEF_SUBP;
-get_default(active) -> true;
-get_default(_) -> erlang:error(badarg).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
@@ -123,32 +108,43 @@ close(?WS_FMT(Handler)) ->
 	ok;
 close(?WSL_FMT(Handler)) ->
 	Handler ! ?CLOSE_REQ,
-	ok.
-%------------------------------------------------------------------------------
-%% Obtem a Url utilizada para estabelecer a Conexao WebSocket
-geturl(_WebSocket) ->
-	?TODO.
-%------------------------------------------------------------------------------
-%% Obtem o Subprotocolo definido durante o HandShake
-getsubprotocol(_WebSocket) ->
-	?TODO.
-%------------------------------------------------------------------------------
-%% Obtem o estado atual do WebSocket
-getstate(_WebSocket) ->
-	?TODO.
+	ok;
+close(_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
+get_opt(Key, Dict) ->
+	case orddict:find(Key, Dict) of
+		{ok, Value} -> 
+			Value;
+		error -> 
+			default_opt(Key)
+	end.
+%------------------------------------------------------------------------------
+default_opt(active) -> 
+	true;
+default_opt(origin) -> 
+	?DEF_ORIGIN;
+default_opt(timeout) -> 
+	?DEF_TIMEOUT;
+default_opt(subprotocol) -> 
+	?DEF_SUBP;
+default_opt(_) -> 
+	erlang:error(badarg).
+%------------------------------------------------------------------------------
 make_handshake(Url, Origin, SubProtocol, Active, Socket) ->
-	{Request, Answer} = hixie76_lib:gen_request(Url, Origin, SubProtocol),
-	RequestHeader = ws_header:to_string(Request),
+	{Request, Answer} = 
+		hixie76_lib:gen_request(Url, Origin, SubProtocol),
+	RequestHeader = 
+		ws_header:to_string(Request),
 
-	HandlerParameter = [
-		{url, Url}, 
-		{origin, Origin}, 
-		{request, Request}, 
-		{active, Active}],
-
+	HandlerParameter = 
+		[{active, Active}, {origin, Origin}, {request, Request}, {url, Url}],
+		
+	send_handshake(Socket, RequestHeader, Answer, HandlerParameter).
+%------------------------------------------------------------------------------
+send_handshake(Socket, RequestHeader, Answer, HandlerParameter) ->
 	case socket:send(Socket, RequestHeader) of
 		ok ->
 			receive_response(Socket, Answer, HandlerParameter);
@@ -158,9 +154,6 @@ make_handshake(Url, Origin, SubProtocol, Active, Socket) ->
 %------------------------------------------------------------------------------
 receive_response(Socket, Answer, HandlerParameter) ->
 	case catch(receive_response_1(Socket, Answer, HandlerParameter)) of
-		{'EXIT', {{case_clause, Error}, _}} ->
-			socket:close(Socket),
-			{error, Error};
 		{'EXIT', {Reason, _}} ->
 			socket:close(Socket),
 			{error, Reason};
@@ -172,17 +165,18 @@ receive_response_1(Socket, Answer, HandlerParameter) ->
 	ResponseHeader = receive_header(Socket),
 	ServerSolution = receive_response_solution(Socket),
 
-	Response = ws_header:parse(ResponseHeader ++ ServerSolution),
-	SubProtocol = hixie76_lib:get_subprotocol(Response),
-
+	Response = 
+		ws_header:parse(ResponseHeader ++ ServerSolution),
+	SubProtocol = 
+		hixie76_lib:get_subprotocol(Response),
+	
+	verify_response(ServerSolution, Answer, Socket, HandlerParameter ++ 
+			[{response, Response}, {subprotocol, SubProtocol}]).
+%------------------------------------------------------------------------------
+verify_response(ServerSolution, Answer, Socket, HandlerParameter) ->
 	case ServerSolution == Answer of
 		true ->
-			WebSocket = create_websocket_handler(
-				Socket, 
-				HandlerParameter ++ 
-					[{response, Response}, 
-					 {subprotocol, SubProtocol}]),
-			 {ok, WebSocket};
+			{ok, create_websocket(Socket, HandlerParameter)};
 		false ->
 			?REPLY_ERROR
 	end.	
@@ -194,9 +188,12 @@ receive_header(Socket) ->
 receive_header_loop(Socket, RevBuffer, Len) 
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR}  -> receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> erlang:error(timeout)
+		{ok, ?CR}  -> 
+			receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> 
+			erlang:error(timeout)
 	end;
 receive_header_loop(_, _, _) ->
 	erlang:error(header_overflow).
@@ -205,9 +202,12 @@ receive_header_loop(_, _, _) ->
 receive_header_loop_1(Socket, RevBuffer, Len) 
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?LF}  -> receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> erlang:error(timeout)
+		{ok, ?LF}  -> 
+			receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> 
+			erlang:error(timeout)
 	end;
 receive_header_loop_1(_, _, _) ->
 	erlang:error(header_overflow).
@@ -216,9 +216,12 @@ receive_header_loop_1(_, _, _) ->
 receive_header_loop_2(Socket, RevBuffer, Len) 
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?CR}  -> receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> erlang:error(timeout)
+		{ok, ?CR}  -> 
+			receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> 
+			erlang:error(timeout)
 	end;
 receive_header_loop_2(_, _, _) ->
 	erlang:error(header_overflow).
@@ -227,9 +230,12 @@ receive_header_loop_2(_, _, _) ->
 receive_header_loop_3(Socket, RevBuffer, Len) 
 when Len < ?MAX_HEADER_LEN ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, ?LF}  -> lists:reverse(?LF++RevBuffer);
-		{ok, Char} -> receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> erlang:error(timeout)
+		{ok, ?LF}  -> 
+			lists:reverse(?LF++RevBuffer);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		_ -> 
+			erlang:error(timeout)
 	end;
 receive_header_loop_3(_, _, _) ->
 	erlang:error(header_overflow).
@@ -241,19 +247,19 @@ receive_len(_, Len, RevBuffer) when Len =< 0 ->
 	lists:reverse(RevBuffer);
 receive_len(Socket, Len, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
-		{ok, Byte} -> receive_len(Socket, Len-1, Byte++RevBuffer);
-		_ -> erlang:error(timeout)
+		{ok, Byte} -> 
+			receive_len(Socket, Len-1, Byte++RevBuffer);
+		_ -> 
+			erlang:error(timeout)
 	end.
 %------------------------------------------------------------------------------
-create_websocket_handler(Socket, HandlerParameter) ->
-	create_websocket_handler(Socket, HandlerParameter, self()).
-create_websocket_handler(Socket, HandlerParameter, Owner) ->
+create_websocket(Socket, HandlerParameter) ->
+	create_websocket(Socket, HandlerParameter, self()).
+create_websocket(Socket, HandlerParameter, Owner) ->
 	HandlerPid = spawn(?MODULE, main_start, [Socket, Owner, HandlerParameter]),
 	socket:controlling_process(Socket, HandlerPid),
 
-	WebSocket = ?WS_FMT(HandlerPid),
-
-	WebSocket.
+	?WS_FMT(HandlerPid).
 %------------------------------------------------------------------------------
 main_start(Socket, Owner, HandlerParameter) ->
 	main_load(HandlerParameter),
@@ -321,12 +327,7 @@ receive
 		From ! ?ACCEPT_RES_ERROR(closed),
 		main_end_loop(MailBox);
 	?RECV_REQ(From, _) ->
-		case queue:out(MailBox) of
-			{empty, NewMailBox} ->
-				From ! ?RECV_RES_ERROR(closed);
-			{{value, Reply}, NewMailBox} ->
-				From ! ?RECV_RES_OK(Reply)
-		end,
+		NewMailBox = end_recv_frame(From, MailBox),
 		main_end_loop(NewMailBox);
 	?SEND_REQ(From, _) ->
 		From !?SEND_RES_ERROR(closed),
@@ -337,6 +338,15 @@ receive
 	_ ->
 		main_end_loop(MailBox)
 end.
+%------------------------------------------------------------------------------
+end_recv_frame(From, MailBox) ->
+	case queue:out(MailBox) of
+		{empty, NewMailBox} ->
+			From ! ?RECV_RES_ERROR(closed);
+		{{value, Reply}, NewMailBox} ->
+			From ! ?RECV_RES_OK(Reply)
+	end,
+	NewMailBox.
 %------------------------------------------------------------------------------
 send_frame(Socket, Data) ->
 	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
@@ -464,8 +474,7 @@ accept_request_1(Socket, SocketOwner) ->
 	case socket:send(Socket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(
-				Socket, SocketOwner, 
-				{Request, Response, SubProtocol});
+				Socket, SocketOwner, {Request, Response, SubProtocol});
 		{error, Reason} ->
 			erlang:error(Reason)
 	end.
@@ -474,10 +483,12 @@ receive_key3(Socket) ->
 	receive_len(Socket, ?KEY3_LEN, []).
 %------------------------------------------------------------------------------
 accept_socket_ok(Socket, SocketOwner, {Request, Response, SubProtocol}) ->
-	HandlerParam = 
-		[{request, Request},
-		 {response, Response}, 
-		 {subprotocol, SubProtocol}],
-	create_websocket_handler(Socket, HandlerParam, SocketOwner).
+	HandlerParam = [
+		{active, false},
+		{request, Request},
+		{response, Response},
+		{subprotocol, SubProtocol}],
+	
+	create_websocket(Socket, HandlerParam, SocketOwner).
 %------------------------------------------------------------------------------
 
