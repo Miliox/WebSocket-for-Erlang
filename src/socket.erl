@@ -10,7 +10,7 @@
 
 -module(socket).
 -author("elmiliox@gmail.com").
--vsn(1).
+-vsn(2).
 %------------------------------------------------------------------------------
 -include("socket.hrl").
 %------------------------------------------------------------------------------
@@ -23,14 +23,14 @@
 accept(?SOCKET_TCP(Socket), Timeout) ->
 	wrap_tcp(gen_tcp:accept(Socket, Timeout));
 accept(?SOCKET_SSL(Socket), Timeout) ->
-	Accept = case ssl:transport_accept(Socket, Timeout) of
+	Accept = 
+	case ssl:transport_accept(Socket, Timeout) of
 		{ok, SSLSocket}=Ok -> 
 			case ssl:ssl_accept(SSLSocket, Timeout) of
 				ok -> Ok;
 				Error -> Error
 			end;
-		Error ->
-			Error
+		Error -> Error
 	end,
 	wrap_ssl(Accept).
 %------------------------------------------------------------------------------
@@ -42,12 +42,12 @@ close(?SOCKET_SSL(Socket)) ->
 connect(Mode, Address, Port, Timeout) ->
 	case Mode of
 		normal ->
-			wrap_tcp(gen_tcp:connect(
-					Address, Port, ?TCP_OPT, Timeout));
+			TCP = gen_tcp:connect(Address, Port, ?TCP_OPT, Timeout)),
+			wrap_tcp(TCP);
 		secure ->
 			ssl:start(),
-			wrap_ssl(ssl:connect(
-					Address, Port, ?TCP_OPT, Timeout))
+			SSL = ssl:connect(Address, Port, ?TCP_OPT, Timeout))
+			wrap_ssl(SSL)
 	end.
 %------------------------------------------------------------------------------
 wrap_tcp({ok, TCPSocket}) ->

@@ -474,7 +474,8 @@ accept_request_1(Socket, SocketOwner) ->
 	case socket:send(Socket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(
-				Socket, SocketOwner, {Request, Response, SubProtocol});
+				Socket, SocketOwner, 
+				{Request, Response, SubProtocol});
 		{error, Reason} ->
 			erlang:error(Reason)
 	end.
