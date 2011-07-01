@@ -42,11 +42,11 @@ close(?SOCKET_SSL(Socket)) ->
 connect(Mode, Address, Port, Timeout) ->
 	case Mode of
 		normal ->
-			TCP = gen_tcp:connect(Address, Port, ?TCP_OPT, Timeout)),
+			TCP = gen_tcp:connect(Address, Port, ?TCP_OPT, Timeout),
 			wrap_tcp(TCP);
 		secure ->
 			ssl:start(),
-			SSL = ssl:connect(Address, Port, ?TCP_OPT, Timeout))
+			SSL = ssl:connect(Address, Port, ?TCP_OPT, Timeout),
 			wrap_ssl(SSL)
 	end.
 %------------------------------------------------------------------------------
