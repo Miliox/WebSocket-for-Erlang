@@ -30,7 +30,7 @@
 %------------------------------------------------------------------------------
 % Data Placeholder
 -define(TODO, {error, todo}).
--define(REPLY_ERROR, {error, invalid_response}).
+-define(REPLY_ERROR, {error, response}).
 %------------------------------------------------------------------------------
 % Socket Representation
 -define(WS_FMT(WebSocket), {websocket, draft_hixie76, WebSocket}).
@@ -57,6 +57,12 @@
 
 -define(ACCEPT_RES_ERROR(From, Reason), {From, accept_error, Reason}).
 -define(ACCEPT_RES_ERROR(Reason), ?ACCEPT_RES_ERROR(self(), Reason)).
+
+-define(LISTEN_OK(From), {From, ok}).
+-define(LISTEN_OK, ?LISTEN_OK(self())).
+
+-define(LISTEN_ERROR(From, Reason), {From, Reason}).
+-define(LISTEN_ERROR(Reason), ?LISTEN_ERROR(self(), Reason)).
 
 -define(RECV_RES_OK(From, Data), {From, recv_ok, Data}).
 -define(RECV_RES_OK(Data), ?RECV_RES_OK(self(), Data)).
@@ -98,4 +104,7 @@
 	"Content-Type: text/plain; charset=utf-8\r\n" ++
 	"Server: ErlangWebSocket1.0\r\n" ++
 	"Content-Length: 26\r\n\r\nOnly WebSocket Connections").
+%------------------------------------------------------------------------------
+-define(ERROR(Reason),     {'EXIT', Reason}).
+-define(ERROR(Reason, Stack), {'EXIT', {Reason, Stack}}).
 %------------------------------------------------------------------------------

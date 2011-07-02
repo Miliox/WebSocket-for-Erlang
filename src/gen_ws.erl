@@ -37,13 +37,15 @@ connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
 	case catch(socket:connect(Mode, Address, Port, Timeout)) of
 		{ok, Socket} ->
 			make_handshake(Url, Origin, SubProtocol, Active, Socket);
-		{'EXIT', Reason} ->
+		?ERROR(Reason, _) ->
+			{error, Reason};
+		?ERROR(Reason) ->
 			{error, Reason};
 		Error ->
 			Error
 	end;
 connect(_,_) ->
-	erlang:error(badarg).
+	{error, badarg}.
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
@@ -53,9 +55,9 @@ listen(Port, Mode) ->
 listen(Port, Mode,_Options) ->
 	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
 	receive
-		{ListenPid, ok} ->
+		?LISTEN_OK(ListenPid) ->
 			{ok, ?WSL_FMT(ListenPid)};
-		{ListenPid, Reason} ->
+		?LISTEN_ERROR(ListenPid, Reason) ->
 			{error, Reason}
 	end.
 %------------------------------------------------------------------------------
@@ -71,12 +73,14 @@ accept(?WSL_FMT(ListenPid), Timeout) ->
 			{error, Reason}
 	end;
 accept(_, _) ->
-	erlang:error(badarg).
+	{error, badarg}.
 %------------------------------------------------------------------------------
 %% Recebe uma mensagem transmitida via WebSocket
 recv(WebSocket) ->
 	recv(WebSocket, infinity).
-recv(?WS_FMT(Handler), Timeout) ->
+%------------------------------------------------------------------------------
+recv(?WS_FMT(Handler), Timeout) 
+when Timeout == infinity orelse Timeout > 0 ->
 	Handler ! ?RECV_REQ(Timeout),
 	receive
 		?RECV_RES_OK(Handler, Data) -> 
@@ -85,13 +89,16 @@ recv(?WS_FMT(Handler), Timeout) ->
 			{error, Reason}
 	after Timeout ->
 		{error, timeout}
-	end.
+	end;
+recv(_, _) ->
+	{error, badarg}.
 %------------------------------------------------------------------------------
 %% Envia uma mensagem via WebSocket
 send(WebSocket, Data) ->
 	send(WebSocket, Data, infinity).
 %------------------------------------------------------------------------------
-send(?WS_FMT(Handler), Data, Timeout) when is_list(Data) ->
+send(?WS_FMT(Handler), Data, Timeout) 
+when is_list(Data) andalso (Timeout == infinity orelse Timeout > 0) ->
 	Handler ! ?SEND_REQ(Data),
 	receive
 		?SEND_RES_OK(Handler) -> 
@@ -104,7 +111,7 @@ send(?WS_FMT(Handler), Data, Timeout) when is_list(Data) ->
 send(_, Data, _) when is_binary(Data) ->
 	{error, einval};
 send(_, _, _) ->
-	{error, einval}.
+	{error, badarg}.
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
 close(?WS_FMT(Handler)) ->
@@ -158,12 +165,17 @@ send_handshake(Socket, RequestHeader, Answer, HandlerParameter) ->
 %------------------------------------------------------------------------------
 receive_response(Socket, Answer, HandlerParameter) ->
 	case catch(receive_response_1(Socket, Answer, HandlerParameter)) of
-		{'EXIT', {Reason, _}} ->
-			socket:close(Socket),
-			{error, Reason};
+		?ERROR(Reason, _) ->
+			receive_response_error(Socket, Reason);
+		?ERROR(Reason) ->
+			receive_response_error(Socket, Reason);
 		Sucess ->
 			Sucess
 	end.
+%------------------------------------------------------------------------------
+receive_response_error(Socket, Reason) ->
+	socket:close(Socket),
+	{error, Reason}.
 %------------------------------------------------------------------------------
 receive_response_1(Socket, Answer, HandlerParameter) ->
 	ResponseHeader = receive_header(Socket),
@@ -182,7 +194,8 @@ verify_response(ServerSolution, Answer, Socket, HandlerParameter) ->
 		true ->
 			{ok, create_websocket(Socket, HandlerParameter)};
 		false ->
-			?REPLY_ERROR
+			socket:close(Socket),
+			{error, response}
 	end.	
 %------------------------------------------------------------------------------
 receive_header(Socket) ->
@@ -196,11 +209,11 @@ when Len < ?MAX_HEADER_LEN ->
 			receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
 		{ok, Char} -> 
 			receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> 
-			erlang:error(timeout)
+		{error, Reason} -> 
+			erlang:error(Reason)
 	end;
 receive_header_loop(_, _, _) ->
-	erlang:error(header_overflow).
+	erlang:error(header).
 %------------------------------------------------------------------------------
 % Falta LFCRLF
 receive_header_loop_1(Socket, RevBuffer, Len) 
@@ -210,11 +223,11 @@ when Len < ?MAX_HEADER_LEN ->
 			receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
 		{ok, Char} -> 
 			receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> 
-			erlang:error(timeout)
+		{error, Reason} -> 
+			erlang:error(Reason)
 	end;
 receive_header_loop_1(_, _, _) ->
-	erlang:error(header_overflow).
+	erlang:error(header).
 %------------------------------------------------------------------------------
 % Falta CRLF
 receive_header_loop_2(Socket, RevBuffer, Len) 
@@ -224,11 +237,11 @@ when Len < ?MAX_HEADER_LEN ->
 			receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
 		{ok, Char} -> 
 			receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> 
-			erlang:error(timeout)
+		{error, Reason} -> 
+			erlang:error(Reason)
 	end;
 receive_header_loop_2(_, _, _) ->
-	erlang:error(header_overflow).
+	erlang:error(header).
 %------------------------------------------------------------------------------
 % Falta LF
 receive_header_loop_3(Socket, RevBuffer, Len) 
@@ -238,11 +251,11 @@ when Len < ?MAX_HEADER_LEN ->
 			lists:reverse(?LF++RevBuffer);
 		{ok, Char} -> 
 			receive_header_loop(Socket, Char++RevBuffer, Len+1);
-		_ -> 
-			erlang:error(timeout)
+		{error, Reason} -> 
+			erlang:error(Reason)
 	end;
 receive_header_loop_3(_, _, _) ->
-	erlang:error(header_overflow).
+	erlang:error(header).
 %------------------------------------------------------------------------------
 receive_response_solution(Socket) ->
 	receive_len(Socket, ?SOLUTION_LEN, []).
@@ -253,8 +266,8 @@ receive_len(Socket, Len, RevBuffer) ->
 	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
 		{ok, Byte} -> 
 			receive_len(Socket, Len-1, Byte++RevBuffer);
-		_ -> 
-			erlang:error(timeout)
+		{error, Reason} -> 
+			erlang:error(Reason)
 	end.
 %------------------------------------------------------------------------------
 create_websocket(Socket, HandlerParameter) ->
@@ -319,8 +332,7 @@ main_loop_recv(Msg, Owner, MailBox) ->
 	case get(active) of
 		false ->
 			queue:in(Msg, MailBox);
-		True ->
-			?print(True),
+		_True ->
 			Owner ! ?WS_RECV_SIGNAL(Msg), 
 			MailBox
 	end.
@@ -408,12 +420,14 @@ receiver_unframe(Socket, Handler, Context, Stream) ->
 listen_start(Port, Mode, Owner) ->
 	case catch(socket:listen(Mode, Port)) of
 		{ok, Listen} ->
-			Owner ! {self(), ok},
+			Owner ! ?LISTEN_OK,
 			listen_loop(Listen, Owner);
 		{error, Reason} ->
-			Owner ! {self(), Reason};
-		{'EXIT', Reason} ->
-			Owner ! {self(), Reason}
+			Owner ! ?LISTEN_ERROR(Reason);
+		?ERROR(Reason, _) ->
+			Owner ! ?LISTEN_ERROR(Reason);
+		?ERROR(Reason) ->
+			Owner ! ?LISTEN_ERROR(Reason)
 	end.
 %------------------------------------------------------------------------------
 listen_loop(Listen, Owner) ->
@@ -450,22 +464,20 @@ accept_socket(Listen, SocketOwner, Timeout) ->
 accept_request(Socket, SocketOwner) ->
 	Reply = 
 	case catch(accept_request_1(Socket, SocketOwner)) of
-		{error, {error, Reason}} ->
-			socket:send(Socket, ?RESPONSE_ERROR),
-			socket:close(Socket),
-			?ACCEPT_RES_ERROR(Reason);
-		{'EXIT', {{case_clause, Reason}, _}} ->
-			socket:send(Socket, ?RESPONSE_ERROR),
-			socket:close(Socket),
-			?ACCEPT_RES_ERROR(Reason);
-		{'EXIT', {Reason, _}} ->
-			socket:send(Socket, ?RESPONSE_ERROR),
-			socket:close(Socket),
-			?ACCEPT_RES_ERROR(Reason);
+		?ERROR(Reason, _) ->
+			accept_request_error(Socket, Reason);
+		?ERROR(Reason) ->
+			accept_request_error(Socket, Reason);
 		WebSocket ->
 			?ACCEPT_RES_OK(WebSocket)
 	end,
 	SocketOwner ! Reply.
+%------------------------------------------------------------------------------
+accept_request_error(Socket, Reason) ->
+	socket:send(Socket, ?RESPONSE_ERROR),
+	socket:close(Socket),
+
+	?ACCEPT_RES_ERROR(Reason).
 %------------------------------------------------------------------------------
 accept_request_1(Socket, SocketOwner) ->
 	RequestHeader = receive_header(Socket),
