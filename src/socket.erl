@@ -15,10 +15,12 @@
 -include("socket.hrl").
 %------------------------------------------------------------------------------
 -import(ssl).
+-import(inet).
 -import(gen_tcp).
 %------------------------------------------------------------------------------
 -export([accept/2, close/1, listen/2, recv/2, recv/3, send/2]).
--export([controlling_process/2, getmode/1]).
+-export([controlling_process/2]).
+-export([sockname/1, peername/1, mode/1]).
 %------------------------------------------------------------------------------
 accept(?SOCKET_TCP(Socket), Timeout) ->
 	wrap_tcp(gen_tcp:accept(Socket, Timeout));
@@ -86,7 +88,23 @@ controlling_process(?SOCKET_TCP(Socket), NewOwner) ->
 controlling_process(?SOCKET_SSL(Socket), NewOwner) ->
 	ssl:controlling_process(Socket, NewOwner).
 %------------------------------------------------------------------------------
-getmode(?SOCKET_TCP(_)) ->
+mode(?SOCKET_TCP(_)) ->
 	normal;
-getmode(?SOCKET_SSL(_)) ->
+mode(?SOCKET_SSL(_)) ->
 	secure.
+%------------------------------------------------------------------------------
+sockname(?SOCKET_TCP(Socket)) ->
+	sockname_1(inet:sockname(Socket));
+sockname(?SOCKET_SSL(Socket)) ->
+	sockname_1(ssl:sockname(Socket)).
+%------------------------------------------------------------------------------
+sockname_1({ok, SocketName}) ->
+	SocketName.
+%------------------------------------------------------------------------------
+peername(?SOCKET_TCP(Socket)) ->
+	peername_1(inet:peername(Socket));
+peername(?SOCKET_SSL(Socket)) ->
+	peername_1(ssl:peername(Socket)).
+%------------------------------------------------------------------------------
+peername_1({ok, SocketName}) ->
+	SocketName.

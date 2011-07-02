@@ -309,6 +309,7 @@ create_websocket(Socket, HandlerParameter, Owner) ->
 %------------------------------------------------------------------------------
 main_start(Socket, Owner, HandlerParameter) ->
 	main_load(HandlerParameter),
+	main_sock(Socket),
 
 	MailBox = queue:new(),
 	Receiver = spawn_link(?MODULE, receiver_start, [Socket, self()]),
@@ -321,6 +322,14 @@ main_load([{Key, Value}|Parameter]) ->
 	main_load(Parameter);
 main_load([_|Parameter]) ->
 	main_load(Parameter).
+%------------------------------------------------------------------------------
+main_sock(Socket) ->
+	{Address, Port} = socket:sockname(Socket),
+	{PeerAddr, PeerPort} = socket:peername(Socket),
+	put(port, Port),
+	put(addr, Address),
+	put(peer_addr, PeerAddr),
+	put(peer_port, PeerPort).
 %------------------------------------------------------------------------------
 main_loop(Socket, Owner, Receiver, MailBox) ->
 receive
@@ -515,7 +524,7 @@ accept_request_1(Socket, SocketOwner) ->
 	Key3 = receive_key3(Socket),
 
 	Request = header:parse(RequestHeader ++ Key3),
-	Response = hixie76:gen_response(Request, socket:getmode(Socket)),
+	Response = hixie76:gen_response(Request, socket:mode(Socket)),
 
 	SubProtocol = hixie76:get_subprotocol(Response),
 
