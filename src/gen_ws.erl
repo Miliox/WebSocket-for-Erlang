@@ -174,7 +174,7 @@ receive_response(Socket, Answer, HandlerParameter) ->
 	end.
 %------------------------------------------------------------------------------
 receive_response_error(Socket, Reason) ->
-	socket:close(Socket),
+	graceful_close(Socket),
 	{error, Reason}.
 %------------------------------------------------------------------------------
 receive_response_1(Socket, Answer, HandlerParameter) ->
@@ -194,7 +194,7 @@ verify_response(ServerSolution, Answer, Socket, HandlerParameter) ->
 		true ->
 			{ok, create_websocket(Socket, HandlerParameter)};
 		false ->
-			socket:close(Socket),
+			graceful_close(Socket),
 			{error, response}
 	end.	
 %------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ receive
 		From ! ?CHANGE_OWNER_ERROR(not_owner),
 		main_loop(Socket, Owner, Receiver, MailBox);
 	?CLOSE_REQ ->
-		socket:close(Socket),
+		graceful_close(Socket),
 		Owner ! ?WS_CLOSE_SIGNAL,
 		main_end_loop(MailBox);
 	% Receiver Update
@@ -510,4 +510,7 @@ accept_socket_ok(Socket, SocketOwner, {Request, Response, SubProtocol}) ->
 	
 	create_websocket(Socket, HandlerParam, SocketOwner).
 %------------------------------------------------------------------------------
+graceful_close(Socket) ->
+	socket:send(Socket, ?CLOSE_FRAME),
+	socket:close(Socket).
 

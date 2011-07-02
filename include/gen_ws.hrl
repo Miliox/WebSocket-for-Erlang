@@ -105,6 +105,8 @@
 	"Server: ErlangWebSocket1.0\r\n" ++
 	"Content-Length: 26\r\n\r\nOnly WebSocket Connections").
 %------------------------------------------------------------------------------
+-define(CLOSE_FRAME, [16#ff, 16#00]).
+%------------------------------------------------------------------------------
 -define(ERROR(Reason),     {'EXIT', Reason}).
 -define(ERROR(Reason, Stack), {'EXIT', {Reason, Stack}}).
 %------------------------------------------------------------------------------
