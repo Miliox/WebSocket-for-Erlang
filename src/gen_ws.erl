@@ -14,9 +14,14 @@
 -include("gen_ws.hrl").
 -include("ws_frame.hrl").
 %------------------------------------------------------------------------------
+-import(lists).
+-import(queue).
+-import(erlang).
 -import(socket).
+-import(orddict).
 -import(wslib.url).
--import(wslib.hixie76_lib).
+-import(wslib.header).
+-import(wslib.hixie76).
 %------------------------------------------------------------------------------
 % WebSocket API
 -export([recv/1, recv/2]).
@@ -166,9 +171,9 @@ default_opt(_) ->
 %------------------------------------------------------------------------------
 make_handshake(Url, Origin, SubProtocol, Active, Socket) ->
 	{Request, Answer} = 
-		hixie76_lib:gen_request(Url, Origin, SubProtocol),
+		hixie76:gen_request(Url, Origin, SubProtocol),
 	RequestHeader = 
-		ws_header:to_string(Request),
+		header:to_string(Request),
 
 	HandlerParameter = 
 		[{active, Active}, {origin, Origin}, {request, Request}, {url, Url}],
@@ -202,9 +207,9 @@ receive_response_1(Socket, Answer, HandlerParameter) ->
 	ServerSolution = receive_response_solution(Socket),
 
 	Response = 
-		ws_header:parse(ResponseHeader ++ ServerSolution),
+		header:parse(ResponseHeader ++ ServerSolution),
 	SubProtocol = 
-		hixie76_lib:get_subprotocol(Response),
+		hixie76:get_subprotocol(Response),
 	
 	verify_response(ServerSolution, Answer, Socket, HandlerParameter ++ 
 			[{response, Response}, {subprotocol, SubProtocol}]).
@@ -385,7 +390,7 @@ end_recv_frame(From, MailBox) ->
 	NewMailBox.
 %------------------------------------------------------------------------------
 send_frame(Socket, Data) ->
-	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
+	?FRAME_SUCESS(Frame) = hixie76:frame({text, Data}),
 	case socket:send(Socket, Frame) of
 		ok -> 
 			?SEND_RES_OK;
@@ -418,7 +423,7 @@ receiver_loop(Socket, Handler, Context, Buffer) ->
 	receiver_unframe(Socket, Handler, Context, Buffer).
 %------------------------------------------------------------------------------
 receiver_unframe(Socket, Handler, Context, Stream) ->
-	case hixie_frame:unframe(Stream, Context) of
+	case hixie76:unframe(Stream, Context) of
 		% Close Signal
 		?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), _) ->
 			Handler ! ?RECV_CLOSE;
@@ -505,12 +510,12 @@ accept_request_1(Socket, SocketOwner) ->
 	RequestHeader = receive_header(Socket),
 	Key3 = receive_key3(Socket),
 
-	Request = ws_header:parse(RequestHeader ++ Key3),
-	Response = hixie76_lib:gen_response(Request, socket:getmode(Socket)),
+	Request = header:parse(RequestHeader ++ Key3),
+	Response = hixie76:gen_response(Request, socket:getmode(Socket)),
 
-	SubProtocol = hixie76_lib:get_subprotocol(Response),
+	SubProtocol = hixie76:get_subprotocol(Response),
 
-	ResponseHeader = ws_header:to_string(Response),
+	ResponseHeader = header:to_string(Response),
 	case socket:send(Socket, ResponseHeader) of
 		ok ->
 			accept_socket_ok(

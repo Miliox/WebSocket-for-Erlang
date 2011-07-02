@@ -22,9 +22,9 @@
 -import(erlang).
 -import(random).
 -import(string).
-%-import(wslib.url).    %Same Package
-%-import(wslib.header). %Same Package
--import(hixie_frame).
+-import(wslib.url).
+-import(wslib.header).
+-import(wslib.hixie_frame).
 %------------------------------------------------------------------------------
 -export([gen_request/2, gen_request/3, gen_response/1, gen_response/2]).
 -export([make_trial/0, resolve_trial/1]).
