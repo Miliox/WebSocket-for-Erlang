@@ -7,10 +7,18 @@
 
 %------------------------------------------------------------------------------
 % Default Settings
--define(DEF_ORIGIN, "127.0.0.1").
--define(DEF_CON_OPT, []).
--define(DEF_SUBP, []).
+-define(DEF_ACTIVE, true).
+-define(DEF_MODE,   normal).
+-define(DEF_ORIGIN, "http://127.0.0.1").
+-define(DEF_SUBP,   []).
 -define(DEF_TIMEOUT, infinity).
+
+-define(DEF_CON_OPT, 
+	[{active, ?DEF_ACTIVE},
+	 {origin, ?DEF_ORIGIN},
+	 {timeout, ?DEF_TIMEOUT},
+ 	 {subprotocol, ?DEF_SUBP}]).
+-define(DEF_LST_OPT, [{mode, ?DEF_MODE}]).
 %------------------------------------------------------------------------------
 % Magic Numbers
 -define(ALL, 0).

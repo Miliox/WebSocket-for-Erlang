@@ -57,7 +57,7 @@ connect(_,_) ->
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
-	listen(Port, [{mode, normal}]).
+	listen(Port, ?DEF_LST_OPT).
 listen(Port, Options) ->
 	Mode = get_opt(mode, Options),
 	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
@@ -152,7 +152,7 @@ get_opt(Key, Dict) ->
 	end.
 %------------------------------------------------------------------------------
 default_opt(active) -> 
-	true;
+	?DEF_ACTIVE;
 default_opt(origin) -> 
 	?DEF_ORIGIN;
 default_opt(timeout) -> 
@@ -160,7 +160,7 @@ default_opt(timeout) ->
 default_opt(subprotocol) -> 
 	?DEF_SUBP;
 default_opt(mode) ->
-	normal;
+	?DEF_MODE;
 default_opt(_) -> 
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
@@ -535,4 +535,4 @@ accept_socket_ok(Socket, SocketOwner, {Request, Response, SubProtocol}) ->
 graceful_close(Socket) ->
 	socket:send(Socket, ?CLOSE_FRAME),
 	socket:close(Socket).
-
+%------------------------------------------------------------------------------
