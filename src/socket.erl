@@ -64,7 +64,9 @@ listen(normal, Port) ->
 	wrap_tcp(gen_tcp:listen(Port, ?TCP_OPT));
 listen(secure, Port) ->
 	ssl:start(),
-	wrap_ssl(ssl:listen(Port, ?SSL_OPT)).
+	wrap_ssl(ssl:listen(Port, ?SSL_OPT));
+listen(_, _) ->
+	{error, badarg}.
 %------------------------------------------------------------------------------
 recv(Socket, Length) ->
 	recv(Socket, Length, infinity).

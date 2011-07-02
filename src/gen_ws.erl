@@ -38,13 +38,7 @@
 connect(Url) ->
 	connect(Url, ?DEF_CON_OPT).
 connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
-	Options = lists:sort(Opt),
-
-	Active  = get_opt(active, Options),
-	Origin  = get_opt(origin, Options),
-	Timeout = get_opt(timeout, Options),
-	SubProtocol = get_opt(subprotocol, Options),
-
+	{Active, Origin, SubProtocol, Timeout} = get_connect_opt(Opt),
 	{Mode, Address, _, Port, _} = url:parse(Url),
 
 	case catch(socket:connect(Mode, Address, Port, Timeout)) of
@@ -147,6 +141,16 @@ controlling_process(_, _) ->
 	{error, badarg}.
 %------------------------------------------------------------------------------
 % Internal Functions
+%------------------------------------------------------------------------------
+get_connect_opt(Opt) ->
+	Options = lists:sort(Opt),
+
+	Active  = get_opt(active, Options),
+	Origin  = get_opt(origin, Options),
+	SubProtocol = get_opt(subprotocol, Options),
+	Timeout = get_opt(timeout, Options),
+
+	{Active, Origin, SubProtocol, Timeout}.
 %------------------------------------------------------------------------------
 get_opt(Key, Dict) ->
 	case orddict:find(Key, Dict) of
