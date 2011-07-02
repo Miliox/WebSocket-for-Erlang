@@ -18,13 +18,13 @@
 -import(ws_url).
 -import(hixie76_lib).
 %------------------------------------------------------------------------------
--export([connect/1, connect/2, listen/2]).
+-export([connect/1, connect/2, listen/1, listen/2]).
 -export([accept/1, accept/2, recv/1, recv/2, send/2, send/3, close/1]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
 connect(Url) ->
 	connect(Url, ?DEF_CON_OPT).
-connect(Url, Opt) ->
+connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
 	Options = lists:sort(Opt),
 
 	Active  = get_opt(active, Options),
@@ -34,12 +34,16 @@ connect(Url, Opt) ->
 
 	{Mode, Address, _, Port, _} = ws_url:parse(Url),
 
-	case socket:connect(Mode, Address, Port, Timeout) of
+	case catch(socket:connect(Mode, Address, Port, Timeout)) of
 		{ok, Socket} ->
 			make_handshake(Url, Origin, SubProtocol, Active, Socket);
+		{'EXIT', Reason} ->
+			{error, Reason};
 		Error ->
 			Error
-	end.
+	end;
+connect(_,_) ->
+	erlang:error(badarg).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
@@ -402,11 +406,13 @@ receiver_unframe(Socket, Handler, Context, Stream) ->
 	end.
 %------------------------------------------------------------------------------
 listen_start(Port, Mode, Owner) ->
-	case socket:listen(Mode, Port) of
+	case catch(socket:listen(Mode, Port)) of
 		{ok, Listen} ->
 			Owner ! {self(), ok},
 			listen_loop(Listen, Owner);
 		{error, Reason} ->
+			Owner ! {self(), Reason};
+		{'EXIT', Reason} ->
 			Owner ! {self(), Reason}
 	end.
 %------------------------------------------------------------------------------
