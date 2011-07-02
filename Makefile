@@ -6,7 +6,7 @@ SHELL=/bin/sh
 
 #Erlang Configuration
 PADIR=-pa ebin
-MODULELIST=[gen_ws, ws_header, ws_url, hixie76_lib, hybi07_lib]
+MODULELIST=[gen_ws, wslib.header, wslib.url, wslib.hixie76, wslib.hybi07]
 
 run: all_test
 	erl $(PADIR)
@@ -18,7 +18,8 @@ all: clean
 	erl -make
 
 clean: 
-	rm -fv ebin/*
+	rm -fv ebin/*.beam
+	rm -fv ebin/wslib/*.beam
 	rm -fv erl_crash.dump
 
 test: all_test

@@ -4,3 +4,7 @@
 {outdir,"../ebin"},{i, "../include"},
 warning_as_errors, report, verbose, export_all]}.
 
+{"./wslib/*",
+[debug_info,
+{outdir,"../ebin/wslib"},{i, "../include"},
+warning_as_errors, report, verbose, export_all]}.

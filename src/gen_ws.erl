@@ -15,7 +15,7 @@
 -include("ws_frame.hrl").
 %------------------------------------------------------------------------------
 -import(socket).
--import(ws_url).
+-import(wslib.url).
 -import(wslib.hixie76_lib).
 %------------------------------------------------------------------------------
 % WebSocket API
@@ -40,7 +40,7 @@ connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
 	Timeout = get_opt(timeout, Options),
 	SubProtocol = get_opt(subprotocol, Options),
 
-	{Mode, Address, _, Port, _} = ws_url:parse(Url),
+	{Mode, Address, _, Port, _} = url:parse(Url),
 
 	case catch(socket:connect(Mode, Address, Port, Timeout)) of
 		{ok, Socket} ->

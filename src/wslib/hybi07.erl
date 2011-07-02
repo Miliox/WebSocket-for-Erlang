@@ -8,7 +8,7 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(hybi07_lib).
+-module(wslib.hybi07).
 -author("elmiliox@gmail.com").
 -vsn(1).
 %------------------------------------------------------------------------------
@@ -22,14 +22,14 @@
 -import(base64).
 -import(random).
 -import(string).
--import(ws_url).
--import(ws_header).
+%-import(wslib.url).
+%-import(wslib.header).
 %------------------------------------------------------------------------------
 -export([make_trial/0, resolve_trial/1, random_key/0]).
 -export([gen_request/2, gen_request/3]).
 %------------------------------------------------------------------------------
 resolve_trial(Request) when is_list(Request) ->
-	{found, Key} = ws_header:find(?HYBI_KEY, Request),
+	{found, Key} = header:find(?HYBI_KEY, Request),
 	resolve_trial_from_key(Key).
 %------------------------------------------------------------------------------
 resolve_trial_from_key(Key) ->
@@ -53,7 +53,7 @@ gen_request(Url, FromUrl) ->
 	gen_request(Url, FromUrl, []).
 %------------------------------------------------------------------------------
 gen_request(Url, FromUrl, SubProtocol) ->
-	{_, _, Host, _, Uri} = ws_url:parse(Url),
+	{_, _, Host, _, Uri} = url:parse(Url),
 	{Key, Solution} = make_trial(),
 	Origin = FromUrl,
 
@@ -95,9 +95,9 @@ gen_response(Request) ->
 	end.
 %------------------------------------------------------------------------------
 gen_response_1(Request) ->
-	{found, _} = ws_header:find(?HYBI_URI, Request),
-	{found, _} = ws_header:find(?HYBI_HOST, Request),
-	{found, _} = ws_header:find(?HYBI_ORIGIN, Request),
+	{found, _} = header:find(?HYBI_URI, Request),
+	{found, _} = header:find(?HYBI_HOST, Request),
+	{found, _} = header:find(?HYBI_ORIGIN, Request),
 	
 	Response = [
 		{?HYBI_STATUS_CODE, "101"},
@@ -114,10 +114,10 @@ gen_response_2(Response, Request) ->
 	gen_response_3(Response ++ [{?HYBI_ACCEPT, Accept}], Request).
 %------------------------------------------------------------------------------
 gen_response_3(ResponsePartial, Request) ->
-	Response = case ws_header:find(?HYBI_PROTOCOL, Request) of
+	Response = case header:find(?HYBI_PROTOCOL, Request) of
 		{found, SubProtocolList} ->
 			SubProtocol = 
-				ws_header:resolve_subprotocol(SubProtocolList),
+				header:resolve_subprotocol(SubProtocolList),
 			ResponsePartial ++ [{?HYBI_PROTOCOL, SubProtocol}];
 		notfound ->
 			ResponsePartial

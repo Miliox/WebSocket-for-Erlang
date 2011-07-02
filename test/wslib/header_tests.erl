@@ -7,14 +7,16 @@
 
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
-
--module(ws_header_tests).
+%------------------------------------------------------------------------------
+-module(wslib.header_tests).
 -author("elmiliox@gmail.com").
 -vsn(1).
-
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 -include_lib("eunit/include/eunit.hrl").
 -include("ws_protocol_header.hrl").
-
+%------------------------------------------------------------------------------
+-import(io).
 %------------------------------------------------------------------------------
 parse_test() ->
 	{ReqResultH75, ReqExpectH75} = parse_test_1(
@@ -38,13 +40,13 @@ parse_test() ->
 		?assertEqual(ResResultH76, ResExpectH76),
 		?assertEqual(ResResultHb7, ResExpectHb7),
 
-		?assertError(badarg, ws_header:parse(atom)),
-		?assertError(badarg, ws_header:parse({})),
-		?assertError(badarg, ws_header:parse(1337))
+		?assertError(badarg, header:parse(atom)),
+		?assertError(badarg, header:parse({})),
+		?assertError(badarg, header:parse(1337))
 	].
 %------------------------------------------------------------------------------
 find_test() ->
-	Find = fun(K, L) -> ws_header:find(K, L) end,
+	Find = fun(K, L) -> header:find(K, L) end,
 
 	H75Q = hx75_req_fmt(),
 	H75R = hx75_res_fmt(),
@@ -153,17 +155,17 @@ find_test() ->
 type_test() ->
 	[
 		?assertEqual({ok, {?HIXIE75, response}}, 
-			ws_header:type(hx75_res_fmt())),
+			header:type(hx75_res_fmt())),
 		?assertEqual({ok, {?HIXIE76, response}}, 
-			ws_header:type(hx76_res_fmt())),
+			header:type(hx76_res_fmt())),
 		?assertEqual({ok, {?HYBI, response}}, 
-			ws_header:type(hb07_res_fmt())),
+			header:type(hb07_res_fmt())),
 		?assertEqual({ok, {?HIXIE75, request}}, 
-			ws_header:type(hx75_req_fmt())),
+			header:type(hx75_req_fmt())),
 		?assertEqual({ok, {?HIXIE76, request}},
-		       	ws_header:type(hx76_req_fmt())),
+		       	header:type(hx76_req_fmt())),
 		?assertEqual({ok, {?HYBI, request}}, 
-			ws_header:type(hb07_req_fmt()))
+			header:type(hb07_req_fmt()))
 	].
 %------------------------------------------------------------------------------
 to_string_test() ->
@@ -185,13 +187,13 @@ to_string_test() ->
 	].
 %------------------------------------------------------------------------------
 to_string_test_1(Sample, E) ->
-	R = ws_header:to_string(Sample),
+	R = header:to_string(Sample),
 	io:format("entrada:~p~nresultado: ~n"++R++"~nesperado: ~n"++E++"~n", 
 		[Sample]),
 	E.
 %------------------------------------------------------------------------------
 parse_test_1(Sample, E) ->
-	R = ws_header:parse(Sample),
+	R = header:parse(Sample),
 	print(Sample, R, E),
 	{R, E}.
 %------------------------------------------------------------------------------

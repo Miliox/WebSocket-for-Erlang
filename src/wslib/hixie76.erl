@@ -22,8 +22,8 @@
 -import(erlang).
 -import(random).
 -import(string).
--import(ws_url).
--import(ws_header).
+%-import(wslib.url).    %Same Package
+%-import(wslib.header). %Same Package
 -import(hixie_frame).
 %------------------------------------------------------------------------------
 -export([gen_request/2, gen_request/3, gen_response/1, gen_response/2]).
@@ -36,7 +36,7 @@ gen_request(Url, FromUrl) ->
 	gen_request(Url, FromUrl, []).
 %------------------------------------------------------------------------------
 gen_request(Url, FromUrl, SubProtocol) ->
-	{_, _, Host, _, Uri} = ws_url:parse(Url),
+	{_, _, Host, _, Uri} = url:parse(Url),
 	{K1, K2, K3, S} = make_trial(),
 	Origin = FromUrl,
 
@@ -75,7 +75,7 @@ gen_response(Request, Mode) ->
 	end.
 %------------------------------------------------------------------------------
 gen_response_1(Request, Mode) ->
-	{found, Origin} = ws_header:find(?HIXIE76_ORIGIN_REQ, Request),
+	{found, Origin} = header:find(?HIXIE76_ORIGIN_REQ, Request),
 	
 	Location = location_from_request(Mode, Request),
 	Response = [
@@ -89,10 +89,10 @@ gen_response_1(Request, Mode) ->
 	gen_response_2(Response, Request).
 %------------------------------------------------------------------------------
 gen_response_2(Response, Request) ->
-	case ws_header:find(?HIXIE76_PROTOCOL, Request) of
+	case header:find(?HIXIE76_PROTOCOL, Request) of
 		{found, ProtocolList} ->
 			Protocol = 
-				ws_header:resolve_subprotocol(ProtocolList),
+				header:resolve_subprotocol(ProtocolList),
 			gen_response_3( Response ++ 
 				[{?HIXIE76_PROTOCOL, Protocol}], Request);
 		notfound ->
@@ -104,8 +104,8 @@ gen_response_3(Response, Request) ->
 	Response ++ [{undefined, []},{undefined, Key}].
 %------------------------------------------------------------------------------
 resolve_trial(Request) when is_list(Request)->
-	{found, K1} = ws_header:find(?HIXIE76_KEY1, Request),
-	{found, K2} = ws_header:find(?HIXIE76_KEY2, Request),
+	{found, K1} = header:find(?HIXIE76_KEY1, Request),
+	{found, K2} = header:find(?HIXIE76_KEY2, Request),
 	{undefined, Key3} = lists:last(Request),
 	
 	resolve_trial({K1, K2, Key3});
@@ -240,13 +240,13 @@ location_from_request(Mode, Request) ->
 		normal -> "ws://";
 		secure -> "wss://"
 	end,
-	{found, Uri} = ws_header:find(?HIXIE76_URI, Request),
-	{found, Host} = ws_header:find(?HIXIE76_HOST, Request),
+	{found, Uri} = header:find(?HIXIE76_URI, Request),
+	{found, Host} = header:find(?HIXIE76_HOST, Request),
 
 	Scheme ++ Host ++ Uri.
 %------------------------------------------------------------------------------
 get_subprotocol(Header) ->
-	case ws_header:find(?HIXIE76_PROTOCOL, Header) of
+	case header:find(?HIXIE76_PROTOCOL, Header) of
 		{found, SubProtocol} ->
 			SubProtocol;
 		notfound ->

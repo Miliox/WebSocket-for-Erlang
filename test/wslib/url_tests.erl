@@ -8,10 +8,9 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(ws_url_tests).
+-module(wslib.url_tests).
 -author("elmiliox@gmail.com").
 -vsn(1).
-
 %------------------------------------------------------------------------------
 -include_lib("eunit/include/eunit.hrl").
 %------------------------------------------------------------------------------
@@ -27,24 +26,24 @@
 %------------------------------------------------------------------------------
 scheme_test() ->
 	[
-		?assertEqual("ws", ws_url:scheme(normal)),
-		?assertEqual("wss", ws_url:scheme(secure)),
-		?assertError(badarg, ws_url:scheme(other))
+		?assertEqual("ws", url:scheme(normal)),
+		?assertEqual("wss", url:scheme(secure)),
+		?assertError(badarg, url:scheme(other))
 	].
 %------------------------------------------------------------------------------
 parse_test() ->
 	[
-		?assertEqual(?URL1_FMT, ws_url:parse(?URL1)),
-		?assertEqual(?URL2_FMT, ws_url:parse(?URL2)),
-		?assertEqual(?URL3_FMT, ws_url:parse(?URL3)),
-		?assertEqual(?URL4_FMT, ws_url:parse(?URL4))
+		?assertEqual(?URL1_FMT, url:parse(?URL1)),
+		?assertEqual(?URL2_FMT, url:parse(?URL2)),
+		?assertEqual(?URL3_FMT, url:parse(?URL3)),
+		?assertEqual(?URL4_FMT, url:parse(?URL4))
 	].
 %------------------------------------------------------------------------------
 to_string_test() ->
 	[
-		?assertEqual(?URL1, ws_url:to_string(?URL1_FMT)),
-		?assertEqual(?URL2++"/", ws_url:to_string(?URL2_FMT)),
-		?assertEqual(?URL3, ws_url:to_string(?URL3_FMT)),
-		?assertEqual(?URL4++"/", ws_url:to_string(?URL4_FMT))
+		?assertEqual(?URL1, url:to_string(?URL1_FMT)),
+		?assertEqual(?URL2++"/", url:to_string(?URL2_FMT)),
+		?assertEqual(?URL3, url:to_string(?URL3_FMT)),
+		?assertEqual(?URL4++"/", url:to_string(?URL4_FMT))
 	].
 %------------------------------------------------------------------------------

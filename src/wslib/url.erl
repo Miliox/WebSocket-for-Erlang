@@ -8,7 +8,7 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 %------------------------------------------------------------------------------
--module(ws_url).
+-module(wslib.url).
 -author("elmiliox@gmail.com").
 -vsn(2).
 %------------------------------------------------------------------------------
