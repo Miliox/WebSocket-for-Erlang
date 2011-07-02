@@ -4,7 +4,6 @@
 %% Orientador : Prof Jucimar Jr ( jucimar.jr@gmail.com )
 %% Objetivo : unificar as definicoes de formato de dado frame websocket
 %% Criado: 05/26/11 11:05:33 (HPC)
-
 %------------------------------------------------------------------------------
 -define(FRAME_FMT(Type, Data), {Type, Data}).
 %------------------------------------------------------------------------------

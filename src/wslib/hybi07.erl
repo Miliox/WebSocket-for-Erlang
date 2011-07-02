@@ -12,18 +12,18 @@
 -author("elmiliox@gmail.com").
 -vsn(1).
 %------------------------------------------------------------------------------
--define(DECODE_KEY_LEN, 16).
 -define(GUID, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").
+-define(DECODE_KEY_LEN, 16).
 %------------------------------------------------------------------------------
 -include("data_size.hrl").
--include("ws_protocol_header.hrl").
+-include("protocol_header.hrl").
 %------------------------------------------------------------------------------
 -import(crypto).
 -import(base64).
 -import(random).
 -import(string).
-%-import(wslib.url).
-%-import(wslib.header).
+-import(wslib.url).
+-import(wslib.header).
 %------------------------------------------------------------------------------
 -export([make_trial/0, resolve_trial/1, random_key/0]).
 -export([gen_request/2, gen_request/3]).

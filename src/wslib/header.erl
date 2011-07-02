@@ -12,10 +12,10 @@
 -author("elmiliox@gmail.com").
 -vsn(3).
 %------------------------------------------------------------------------------
--include("ws_header.hrl").
--include("ws_re_header.hrl").
--include("ws_re_subprotocol.hrl").
--include("ws_protocol_header.hrl").
+-include("re/header.hrl").
+-include("wslib/header.hrl").
+-include("re/subprotocol.hrl").
+-include("protocol_header.hrl").
 %------------------------------------------------------------------------------
 -import(re).
 -import(lists).

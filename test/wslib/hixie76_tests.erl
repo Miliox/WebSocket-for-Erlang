@@ -12,8 +12,8 @@
 -author("elmiliox@gmail.com").
 -vsn(1).
 %------------------------------------------------------------------------------
+-include("protocol_header.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include("ws_protocol_header.hrl").
 %------------------------------------------------------------------------------
 gen_request_test() ->
 	Url = "ws://echo.websocket.org/test",

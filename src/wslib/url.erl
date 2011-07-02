@@ -12,8 +12,8 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 %------------------------------------------------------------------------------
--include("ws_url.hrl").
--include("ws_re_url.hrl").
+-include("re/url.hrl").
+-include("wslib/url.hrl").
 %------------------------------------------------------------------------------
 -import(re).
 -import(erlang).

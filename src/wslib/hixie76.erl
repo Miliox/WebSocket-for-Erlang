@@ -13,10 +13,10 @@
 -author("elmiliox@gmail.com").
 -vsn(2).
 %------------------------------------------------------------------------------
--include("hixie76.hrl").
 -include("data_size.hrl").
--include("ws_protocol_header.hrl").
--include("ws_re_subprotocol.hrl").
+-include("wslib/hixie76.hrl").
+-include("re/subprotocol.hrl").
+-include("protocol_header.hrl").
 %------------------------------------------------------------------------------
 -import(lists).
 -import(erlang).
