@@ -121,13 +121,15 @@ send(_, _, _) ->
 %------------------------------------------------------------------------------
 %% Encerra uma conexao WebSocket
 close(?WS_FMT(Handler)) ->
-	Handler ! ?CLOSE_REQ,
-	ok;
+	close_1(Handler);
 close(?WSL_FMT(Handler)) ->
-	Handler ! ?CLOSE_REQ,
-	ok;
+	close_1(Handler);
 close(_) ->
 	erlang:error(badarg).
+%------------------------------------------------------------------------------
+close_1(Handler) ->
+	Handler ! ?CLOSE_REQ,
+	ok.
 %------------------------------------------------------------------------------
 controlling_process(?WS_FMT(Handler), NewOwner) when is_pid(NewOwner) -> 
 	Handler ! ?CHANGE_OWNER(NewOwner),
