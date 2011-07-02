@@ -12,19 +12,17 @@
 -author("elmiliox@gmail.com").
 -vsn(3).
 %------------------------------------------------------------------------------
--export([parse/1, type/1, find/2, to_string/1, resolve_subprotocol/1]).
-%------------------------------------------------------------------------------
--include("ws_protocol_header.hrl").
+-include("ws_header.hrl").
 -include("ws_re_header.hrl").
 -include("ws_re_subprotocol.hrl").
+-include("ws_protocol_header.hrl").
 %------------------------------------------------------------------------------
--define(DEFINED_HEADER(Draft, Type), {ok, {Draft, Type}}).
--define(ERROR_HEADER, {error, invalid_header}).
+-import(re).
+-import(lists).
+-import(erlang).
+-import(string).
 %------------------------------------------------------------------------------
--define(FIRST, 1).
--define(SPACE, $ ).
--define(COLON, $:).
--define(SEPARATOR(Field), [?COLON|[?SPACE|Field]]).
+-export([parse/1, type/1, find/2, to_string/1, resolve_subprotocol/1]).
 %------------------------------------------------------------------------------
 % HTTP Header -> [{Key, Value}, ...]
 parse(Header) when is_binary(Header) ->

@@ -7,19 +7,18 @@
 
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
-
+%------------------------------------------------------------------------------
 -module(ws_url).
 -author("elmiliox@gmail.com").
 -vsn(2).
 %------------------------------------------------------------------------------
--import(re).
--export([scheme/1, parse/1, to_string/1]).
-%------------------------------------------------------------------------------
+-include("ws_url.hrl").
 -include("ws_re_url.hrl").
 %------------------------------------------------------------------------------
--define(DEFAULT_PORT, 80).
--define(DEFAULT_SECP, 443).
--define(DEFAULT_PATH, "/").
+-import(re).
+-import(erlang).
+%------------------------------------------------------------------------------
+-export([scheme/1, parse/1, to_string/1]).
 %------------------------------------------------------------------------------
 % Full Url
 parse(Url) when is_list(Url) ->

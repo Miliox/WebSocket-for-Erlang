@@ -18,8 +18,11 @@
 -include("data_size.hrl").
 -include("ws_protocol_header.hrl").
 %------------------------------------------------------------------------------
--import(base64).
 -import(crypto).
+-import(base64).
+-import(random).
+-import(string).
+-import(ws_url).
 -import(ws_header).
 %------------------------------------------------------------------------------
 -export([make_trial/0, resolve_trial/1, random_key/0]).

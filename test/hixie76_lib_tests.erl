@@ -15,6 +15,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("ws_protocol_header.hrl").
 
+-import(wslib.hixie76_lib).
 %------------------------------------------------------------------------------
 gen_request_test() ->
 	Url = "ws://echo.websocket.org/test",

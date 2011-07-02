@@ -8,35 +8,29 @@
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
 
--module(hixie76_lib).
+%------------------------------------------------------------------------------
+-module(wslib.hixie76).
 -author("elmiliox@gmail.com").
--vsn(1).
-
+-vsn(2).
+%------------------------------------------------------------------------------
+-include("hixie76.hrl").
 -include("data_size.hrl").
 -include("ws_protocol_header.hrl").
 -include("ws_re_subprotocol.hrl").
 %------------------------------------------------------------------------------
--import(erlang).
 -import(lists).
+-import(erlang).
 -import(random).
 -import(string).
--import(ws_header).
 -import(ws_url).
+-import(ws_header).
+-import(hixie_frame).
 %------------------------------------------------------------------------------
 -export([gen_request/2, gen_request/3, gen_response/1, gen_response/2]).
 -export([make_trial/0, resolve_trial/1]).
 -export([encode_key/1, encode_key/2, decode_key/1]).
 -export([random_encode_key/0, random_key3/0]).
-%------------------------------------------------------------------------------
--define(SPACE, $ ).
--define(NO_SPACE,  0).
--define(MIN_SPACE, 1).
-%------------------------------------------------------------------------------
--define(KEY3_SIZE, 8).
--define(VALID_PAD_CHAR, 
-	"abcdefghijklmnopqrstuvwxyz" ++
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
-	"'\"\\{}[]?.,<>|+-*%!@&^$#:;_").
+-export([frame/1, unframe/1, unframe/2]).
 %------------------------------------------------------------------------------
 gen_request(Url, FromUrl) ->
 	gen_request(Url, FromUrl, []).
@@ -258,3 +252,14 @@ get_subprotocol(Header) ->
 		notfound ->
 			nil
 	end.
+%------------------------------------------------------------------------------
+frame(Frame) ->
+	hixie_frame:frame(Frame).
+%------------------------------------------------------------------------------
+unframe(Stream) ->
+	hixie_frame:unframe(Stream).
+%------------------------------------------------------------------------------
+unframe(Stream, Context) ->
+	hixie_frame:unframe(Stream, Context).
+%------------------------------------------------------------------------------
+

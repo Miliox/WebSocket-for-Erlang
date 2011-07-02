@@ -8,14 +8,16 @@
 
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
 %% @copyright Emiliano@2011
-
+%------------------------------------------------------------------------------
 -module(hixie_frame).
 -author("elmiliox@gmail.com").
--vsn(1).
-
+-vsn(2).
 %------------------------------------------------------------------------------
 -include("hixie_frame.hrl").
 -include("ws_frame.hrl").
+%------------------------------------------------------------------------------
+-import(lists).
+-import(erlang).
 %------------------------------------------------------------------------------
 -export([frame/1, unframe/1, unframe/2]).
 %------------------------------------------------------------------------------
@@ -65,8 +67,8 @@ when
 	(Flag >= ?TXT_LOW) andalso 
 	(Flag =< ?TXT_HIG) ->
 		unframe_text(Stream, []);
-unframe_text(_) ->
-	erlang:error(badarg).
+unframe_text(Stream) ->
+	?UNFRAME_ERROR(badarg, Stream).
 %------------------------------------------------------------------------------
 unframe_text([], Buffer) ->
 	?UNFRAME_PARTIAL(?FRAME_TXT(Buffer), []);
@@ -87,7 +89,8 @@ when
 			H == 16#00
 		of
 			true ->
-				?UNFRAME_SUCESS(?FRAME_SIGN(?SIGN_CLOSE), T);
+				?UNFRAME_SUCESS(
+					?FRAME_SIGN(?SIGN_CLOSE), T);
 			false ->
 				unframe_bin(Stream, Factor)
 		end.
