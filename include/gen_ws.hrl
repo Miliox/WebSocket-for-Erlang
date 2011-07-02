@@ -56,6 +56,9 @@
 
 -define(CLOSE_REQ, close).
 
+-define(INFO_REQ(From), {From, sock_info}).
+-define(INFO_REQ, ?INFO_REQ(self())).
+
 -define(CHANGE_OWNER(From, NewOwner), {From, change_owner, NewOwner}).
 -define(CHANGE_OWNER(NewOwner), ?CHANGE_OWNER(self(), NewOwner)).
 %------------------------------------------------------------------------------
@@ -90,6 +93,8 @@
 -define(CHANGE_OWNER_ERROR(From, Reason), {From, change_owner, {error, Reason}}).
 -define(CHANGE_OWNER_ERROR(Reason), ?CHANGE_OWNER_ERROR(self(), Reason)).
 
+-define(INFO_RES(From, Info), {From, sock_info, Info}).
+-define(INFO_RES(Info), ?INFO_RES(self(), Info)).
 %------------------------------------------------------------------------------
 % WebSocket Active Messages
 -define(WS_RECV_SIGNAL(Frame),  {ws, ?WS_FMT(self()), Frame}).

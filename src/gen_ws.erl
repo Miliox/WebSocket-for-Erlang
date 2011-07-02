@@ -140,6 +140,12 @@ controlling_process(?WS_FMT(Handler), NewOwner) when is_pid(NewOwner) ->
 controlling_process(_, _) ->
 	{error, badarg}.
 %------------------------------------------------------------------------------
+getinfo(?WS_FMT(Handler)) ->
+	Handler ! ?INFO_REQ,
+	receive
+		?INFO_RES(Handler, Info) -> lists:sort(Info)
+	end.
+%------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
 get_connect_opt(Opt) ->
@@ -352,6 +358,9 @@ receive
 		graceful_close(Socket),
 		Owner ! ?WS_CLOSE_SIGNAL,
 		main_end_loop(MailBox);
+	?INFO_REQ(From) ->
+		From ! ?INFO_RES(get()),
+		main_loop(Socket, Owner, Receiver, MailBox);
 	% Receiver Update
 	?RECV_NEW(Receiver, Msg) ->
 		NewMailBox = main_loop_recv(Msg, Owner, MailBox),
@@ -388,6 +397,9 @@ receive
 		main_end_loop(MailBox);
 	?CHANGE_OWNER(From, _) ->
 		From ! {error, closed},
+		main_end_loop(MailBox);
+	?INFO_REQ(From) ->
+		From ! ?INFO_RES(get()),
 		main_end_loop(MailBox);
 	_ ->
 		main_end_loop(MailBox)
