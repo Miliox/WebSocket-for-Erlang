@@ -9,7 +9,7 @@
 %------------------------------------------------------------------------------
 -module(gen_ws).
 -author("elmiliox@gmail.com").
--vsn(4).
+-vsn(5).
 %------------------------------------------------------------------------------
 -include("gen_ws.hrl").
 -include("ws_frame.hrl").
@@ -18,8 +18,16 @@
 -import(ws_url).
 -import(hixie76_lib).
 %------------------------------------------------------------------------------
--export([connect/1, connect/2, listen/1, listen/2]).
--export([accept/1, accept/2, recv/1, recv/2, send/2, send/3, close/1]).
+% WebSocket API
+-export([recv/1, recv/2]).
+-export([send/2, send/3]).
+-export([connect/1, connect/2]).
+% Listen WebSocket API
+-export([accept/1, accept/2]).
+-export([listen/1,  listen/2]).
+% Commom API
+-export([close/1]).
+-export([controlling_process/2]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
 connect(Url) ->
@@ -122,6 +130,17 @@ close(?WSL_FMT(Handler)) ->
 	ok;
 close(_) ->
 	erlang:error(badarg).
+%------------------------------------------------------------------------------
+controlling_process(?WS_FMT(Handler), NewOwner) when is_pid(NewOwner) -> 
+	Handler ! ?CHANGE_OWNER(NewOwner),
+	receive
+		?CHANGE_OWNER_OK(Handler) ->
+			ok;
+		?CHANGE_OWNER_ERROR(Handler, Reason) ->
+			{error, Reason}
+	end;
+controlling_process(_, _) ->
+	{error, badarg}.
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
@@ -367,8 +386,10 @@ end_recv_frame(From, MailBox) ->
 send_frame(Socket, Data) ->
 	?FRAME_SUCESS(Frame) = hixie_frame:frame({text, Data}),
 	case socket:send(Socket, Frame) of
-		ok -> ?SEND_RES_OK;
-		{error, Reason} -> ?SEND_RES_ERROR(Reason)
+		ok -> 
+			?SEND_RES_OK;
+		{error, Reason} -> 
+			?SEND_RES_ERROR(Reason)
 	end.
 %------------------------------------------------------------------------------
 recv_frame(MailBox) ->
