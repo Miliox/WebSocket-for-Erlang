@@ -24,7 +24,7 @@
 -export([connect/1, connect/2]).
 % Listen WebSocket API
 -export([accept/1, accept/2]).
--export([listen/1,  listen/2]).
+-export([listen/1, listen/2]).
 % Commom API
 -export([close/1]).
 -export([controlling_process/2]).
@@ -57,10 +57,9 @@ connect(_,_) ->
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
-	listen(Port, normal).
-listen(Port, Mode) ->
-	listen(Port, Mode, []).
-listen(Port, Mode,_Options) ->
+	listen(Port, [{mode, normal}]).
+listen(Port, Options) ->
+	Mode = get_opt(mode, Options),
 	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
 	receive
 		?LISTEN_OK(ListenPid) ->
@@ -160,6 +159,8 @@ default_opt(timeout) ->
 	?DEF_TIMEOUT;
 default_opt(subprotocol) -> 
 	?DEF_SUBP;
+default_opt(mode) ->
+	normal;
 default_opt(_) -> 
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
