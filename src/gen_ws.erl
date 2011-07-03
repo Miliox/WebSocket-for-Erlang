@@ -2,8 +2,7 @@
 %% TCC1: Trabalho de Conclusao de Curso - 1
 %% Aluno: Emiliano Carlos de Moraes Firmino ( elmiliox@gmail.com )
 %% Orientador : Prof Jucimar Jr ( jucimar.jr@gmail.com )
-%% Objetivo : Gerar um WebSocket que comporte-se como os gerados pelo gen_tcp 
-%%            ou gen_udp.
+%% Objetivo : WebSocket equivalente ao Socket Comum
 %% Criado: 05/17/11 20:00:39 (HPC)
 %% Copyright Emiliano@2011
 %------------------------------------------------------------------------------
@@ -170,14 +169,14 @@ get_opt(Key, Dict) ->
 %------------------------------------------------------------------------------
 default_opt(active) -> 
 	?DEF_ACTIVE;
-default_opt(origin) -> 
-	?DEF_ORIGIN;
-default_opt(timeout) -> 
-	?DEF_TIMEOUT;
-default_opt(subprotocol) -> 
-	?DEF_SUBP;
 default_opt(mode) ->
 	?DEF_MODE;
+default_opt(origin) -> 
+	?DEF_ORIGIN;
+default_opt(subprotocol) -> 
+	?DEF_SUBP;
+default_opt(timeout) -> 
+	?DEF_TIMEOUT;
 default_opt(_) -> 
 	erlang:error(badarg).
 %------------------------------------------------------------------------------
@@ -236,9 +235,7 @@ verify_response(ServerSolution, Answer, Socket, HandlerParameter) ->
 	end.	
 %------------------------------------------------------------------------------
 receive_header(Socket) ->
-	Len = 0,
-	RevBuffer = [],
-	receive_header_loop(Socket, RevBuffer, Len).
+	receive_header_loop(Socket, [], 0).
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_header_loop(Socket, RevBuffer, Len) 
@@ -319,26 +316,28 @@ create_websocket(Socket, HandlerParameter, Owner) ->
 %------------------------------------------------------------------------------
 main_start(Socket, Owner, HandlerParameter) ->
 	main_load(HandlerParameter),
-	main_sock(Socket),
+	main_load_info_sock(Socket),
 
 	MailBox = queue:new(),
 	Receiver = spawn_link(?MODULE, receiver_start, [Socket, self()]),
 
 	main_loop(Socket, Owner, Receiver, MailBox).
 %------------------------------------------------------------------------------
-main_load([]) -> ok;
+main_load([]) -> 
+	ok;
 main_load([{Key, Value}|Parameter]) -> 
 	put(Key, Value),
 	main_load(Parameter);
 main_load([_|Parameter]) ->
 	main_load(Parameter).
 %------------------------------------------------------------------------------
-main_sock(Socket) ->
-	{Address, Port} = socket:sockname(Socket),
+main_load_info_sock(Socket) ->
+	{HostAddr, HostPort} = socket:sockname(Socket),
 	{PeerAddr, PeerPort} = socket:peername(Socket),
-	put(port, Port),
-	put(addr, Address),
+
+	put(host_addr, HostAddr),
 	put(peer_addr, PeerAddr),
+	put(host_port, HostPort),
 	put(peer_port, PeerPort).
 %------------------------------------------------------------------------------
 main_loop(Socket, Owner, Receiver, MailBox) ->
@@ -413,8 +412,8 @@ end_recv_frame(From, MailBox) ->
 	case queue:out(MailBox) of
 		{empty, NewMailBox} ->
 			From ! ?RECV_RES_ERROR(closed);
-		{{value, Reply}, NewMailBox} ->
-			From ! ?RECV_RES_OK(Reply)
+		{{value, Msg}, NewMailBox} ->
+			From ! ?RECV_RES_OK(Msg)
 	end,
 	NewMailBox.
 %------------------------------------------------------------------------------
