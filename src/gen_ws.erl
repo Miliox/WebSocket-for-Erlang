@@ -236,7 +236,9 @@ verify_response(ServerSolution, Answer, Socket, HandlerParameter) ->
 	end.	
 %------------------------------------------------------------------------------
 receive_header(Socket) ->
-	receive_header_loop(Socket, [], 0).
+	Len = 0,
+	RevBuffer = [],
+	receive_header_loop(Socket, RevBuffer, Len).
 %------------------------------------------------------------------------------
 % Header Loop Termina quanto encontrar CRLFCRLF
 receive_header_loop(Socket, RevBuffer, Len) 

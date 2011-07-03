@@ -18,7 +18,8 @@
 	 {origin, ?DEF_ORIGIN},
 	 {timeout, ?DEF_TIMEOUT},
  	 {subprotocol, ?DEF_SUBP}]).
--define(DEF_LST_OPT, [{mode, ?DEF_MODE}]).
+-define(DEF_LST_OPT, 
+	[{mode, ?DEF_MODE}]).
 %------------------------------------------------------------------------------
 % Magic Numbers
 -define(ALL, 0).

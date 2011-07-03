@@ -25,8 +25,8 @@
 -define(SOCKET_SSL(Socket), {tls, Socket}).
 
 % Socket Configuration
--define(TCP_OPT, [list, {packet, raw}, {active, false}]).
--define(SSL_OPT, ?TCP_OPT ++ 
-	[{certfile, "doc/certificate.pem"}, {keyfile, "doc/key.pem"}]).
+-define(TCP_OPT, [list, {packet, raw}, {active, false}, {reuseaddr, true}]).
+-define(SSL_OPT, 
+	?TCP_OPT ++ [{certfile, "doc/certificate.pem"}, {keyfile, "doc/key.pem"}]).
 
 

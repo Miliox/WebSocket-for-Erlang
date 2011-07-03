@@ -12,7 +12,8 @@ CertFile=certificate.${Ext}
 
 openssl genrsa \
 	-out ${KeyFile} ${BitLen}
-openssl req -new \
+openssl req \
+	-new \
 	-key ${KeyFile} \
 	-out ${ReqFile}
 openssl x509 -req \
