@@ -13,11 +13,14 @@
 -include("gen_ws.hrl").
 -include("wslib/frame.hrl").
 %------------------------------------------------------------------------------
+-import(erlang).
+%------------------------------------------------------------------------------
 -import(lists).
 -import(queue).
--import(erlang).
--import(socket).
 -import(orddict).
+%------------------------------------------------------------------------------
+-import(socket).
+%------------------------------------------------------------------------------
 -import(wslib.url).
 -import(wslib.header).
 -import(wslib.hixie76).
@@ -39,7 +42,7 @@ connect(Url) ->
 connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
 	{Active, Origin, SubProtocol, Timeout} = get_connect_opt(Opt),
 	{Mode, Address, _, Port, _} = url:parse(Url),
-
+	
 	case catch(socket:connect(Mode, Address, Port, Timeout)) of
 		{ok, Socket} ->
 			make_handshake(Url, Origin, SubProtocol, Active, Socket);
@@ -74,6 +77,8 @@ accept(?WSL_FMT(ListenPid), Timeout) ->
 	receive
 		?ACCEPT_RES_OK(ListenPid, WebSocket) ->
 			{ok, WebSocket};
+		?ACCEPT_RES_ERROR(ListenPid, closed) ->
+			{error, badsock};
 		?ACCEPT_RES_ERROR(ListenPid, Reason) ->
 			{error, Reason}
 	end;
@@ -142,6 +147,11 @@ controlling_process(_, _) ->
 	{error, badarg}.
 %------------------------------------------------------------------------------
 getinfo(?WS_FMT(Handler)) ->
+	getinfo_1(Handler);
+getinfo(?WSL_FMT(Handler)) ->
+	getinfo_1(Handler).
+%------------------------------------------------------------------------------
+getinfo_1(Handler) ->
 	Handler ! ?INFO_REQ,
 	receive
 		?INFO_RES(Handler, Info) -> lists:sort(Info)
@@ -309,29 +319,29 @@ receive_len(Socket, Len, RevBuffer) ->
 create_websocket(Socket, HandlerParameter) ->
 	create_websocket(Socket, HandlerParameter, self()).
 create_websocket(Socket, HandlerParameter, Owner) ->
-	HandlerPid = spawn(?MODULE, main_start, [Socket, Owner, HandlerParameter]),
+	HandlerPid = spawn(?MODULE, handler_start, [Socket, Owner, HandlerParameter]),
 	socket:controlling_process(Socket, HandlerPid),
 
 	?WS_FMT(HandlerPid).
 %------------------------------------------------------------------------------
-main_start(Socket, Owner, HandlerParameter) ->
-	main_load(HandlerParameter),
-	main_load_info_sock(Socket),
+handler_start(Socket, Owner, HandlerParameter) ->
+	handler_load(HandlerParameter),
+	handler_load_info_sock(Socket),
 
 	MailBox = queue:new(),
 	Receiver = spawn_link(?MODULE, receiver_start, [Socket, self()]),
 
-	main_loop(Socket, Owner, Receiver, MailBox).
+	handler_loop(Socket, Owner, Receiver, MailBox).
 %------------------------------------------------------------------------------
-main_load([]) -> 
+handler_load([]) -> 
 	ok;
-main_load([{Key, Value}|Parameter]) -> 
+handler_load([{Key, Value}|Parameter]) -> 
 	put(Key, Value),
-	main_load(Parameter);
-main_load([_|Parameter]) ->
-	main_load(Parameter).
+	handler_load(Parameter);
+handler_load([_|Parameter]) ->
+	handler_load(Parameter).
 %------------------------------------------------------------------------------
-main_load_info_sock(Socket) ->
+handler_load_info_sock(Socket) ->
 	{HostAddr, HostPort} = socket:sockname(Socket),
 	{PeerAddr, PeerPort} = socket:peername(Socket),
 
@@ -340,45 +350,45 @@ main_load_info_sock(Socket) ->
 	put(host_port, HostPort),
 	put(peer_port, PeerPort).
 %------------------------------------------------------------------------------
-main_loop(Socket, Owner, Receiver, MailBox) ->
+handler_loop(Socket, Owner, Receiver, MailBox) ->
 receive
 	% WebSocket API
 	?SEND_REQ(From, Data) ->
 		Reply = send_frame(Socket, Data),
 		From ! Reply,
-		main_loop(Socket, Owner, Receiver, MailBox);
+		handler_loop(Socket, Owner, Receiver, MailBox);
 	?RECV_REQ(From, _Timeout) ->
 		{Reply, NewMailBox} = recv_frame(MailBox),
 		From ! Reply,
-		main_loop(Socket, Owner, Receiver, NewMailBox);
+		handler_loop(Socket, Owner, Receiver, NewMailBox);
 	?CHANGE_OWNER(Owner, NewOwner) ->
 		Owner ! ?CHANGE_OWNER_OK,
-		main_loop(Socket, NewOwner, Receiver, MailBox);
+		handler_loop(Socket, NewOwner, Receiver, MailBox);
 	?CHANGE_OWNER(From, _) ->
 		From ! ?CHANGE_OWNER_ERROR(not_owner),
-		main_loop(Socket, Owner, Receiver, MailBox);
+		handler_loop(Socket, Owner, Receiver, MailBox);
 	?CLOSE_REQ ->
 		graceful_close(Socket),
 		Owner ! ?WS_CLOSE_SIGNAL,
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	?INFO_REQ(From) ->
 		From ! ?INFO_RES(get()),
-		main_loop(Socket, Owner, Receiver, MailBox);
+		handler_loop(Socket, Owner, Receiver, MailBox);
 	% Receiver Update
 	?RECV_NEW(Receiver, Msg) ->
-		NewMailBox = main_loop_recv(Msg, Owner, MailBox),
-		main_loop(Socket, Owner, Receiver, NewMailBox);
+		NewMailBox = handler_loop_recv(Msg, Owner, MailBox),
+		handler_loop(Socket, Owner, Receiver, NewMailBox);
 	?RECV_CLOSE(Receiver) ->
 		socket:close(Socket),
 		Owner ! ?WS_CLOSE_SIGNAL,
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	% Other
 	X ->
-		?print("main_loop", X),
-		main_loop(Socket, Owner, Receiver, MailBox)
+		?print("handler_loop", X),
+		handler_loop(Socket, Owner, Receiver, MailBox)
 end.
 %------------------------------------------------------------------------------
-main_loop_recv(Msg, Owner, MailBox) ->
+handler_loop_recv(Msg, Owner, MailBox) ->
 	case get(active) of
 		false ->
 			queue:in(Msg, MailBox);
@@ -387,25 +397,25 @@ main_loop_recv(Msg, Owner, MailBox) ->
 			MailBox
 	end.
 %------------------------------------------------------------------------------
-main_end_loop(MailBox) ->
+handler_end_loop(MailBox) ->
 receive
 	?ACCEPT_REQ(From, _) ->
 		From ! ?ACCEPT_RES_ERROR(closed),
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	?RECV_REQ(From, _) ->
 		NewMailBox = end_recv_frame(From, MailBox),
-		main_end_loop(NewMailBox);
+		handler_end_loop(NewMailBox);
 	?SEND_REQ(From, _) ->
 		From !?SEND_RES_ERROR(closed),
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	?CHANGE_OWNER(From, _) ->
 		From ! {error, closed},
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	?INFO_REQ(From) ->
 		From ! ?INFO_RES(get()),
-		main_end_loop(MailBox);
+		handler_end_loop(MailBox);
 	_ ->
-		main_end_loop(MailBox)
+		handler_end_loop(MailBox)
 end.
 %------------------------------------------------------------------------------
 end_recv_frame(From, MailBox) ->
@@ -496,6 +506,9 @@ receive
 	?CHANGE_OWNER(From, _) ->
 		From ! ?CHANGE_OWNER_ERROR(not_owner),
 		listen_loop(Listen, Owner);
+	?INFO_REQ(From) ->
+		From ! ?INFO_RES(get()),
+		listen_loop(Listen, Owner);
 	?CLOSE_REQ ->
 		socket:close(Listen),
 		Owner ! ?WS_CLOSE_SIGNAL,
@@ -506,7 +519,7 @@ receive
 end.
 %------------------------------------------------------------------------------			
 listen_end_loop(_) ->
-	main_end_loop(queue:new()).
+	handler_end_loop(queue:new()).
 %------------------------------------------------------------------------------
 accept_socket(Listen, SocketOwner, Timeout) ->
 	case socket:accept(Listen, Timeout) of
