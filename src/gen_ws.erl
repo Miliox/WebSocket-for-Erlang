@@ -14,13 +14,11 @@
 -include("wslib/frame.hrl").
 %------------------------------------------------------------------------------
 -import(erlang).
-%------------------------------------------------------------------------------
+% Data Structure
 -import(lists).
 -import(queue).
--import(orddict).
-%------------------------------------------------------------------------------
 -import(socket).
-%------------------------------------------------------------------------------
+% WebSocket Library
 -import(wslib.url).
 -import(wslib.header).
 -import(wslib.hixie76).
@@ -34,6 +32,7 @@
 -export([listen/1, listen/2]).
 % Commom API
 -export([close/1]).
+-export([getinfo/1]).
 -export([controlling_process/2]).
 %------------------------------------------------------------------------------
 %% Cria um WebSocket a ser usado pelo Cliente
@@ -59,7 +58,7 @@ connect(_,_) ->
 %% Cria um WebSocket a ser usado pelo Servidor
 listen(Port) ->
 	listen(Port, ?DEF_LST_OPT).
-listen(Port, Options) ->
+listen(Port, Options) when is_list(Options) ->
 	Mode = get_opt(mode, Options),
 	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
 	receive
@@ -67,7 +66,9 @@ listen(Port, Options) ->
 			{ok, ?WSL_FMT(ListenPid)};
 		?LISTEN_ERROR(ListenPid, Reason) ->
 			{error, Reason}
-	end.
+	end;
+listen(_, _) ->
+	{error, badarg}.
 %------------------------------------------------------------------------------
 %% Efetua o HandShake e estabelece uma Conexao WebSocket
 accept(ListenWebSocket) ->
@@ -159,9 +160,7 @@ getinfo_1(Handler) ->
 %------------------------------------------------------------------------------
 % Internal Functions
 %------------------------------------------------------------------------------
-get_connect_opt(Opt) ->
-	Options = lists:sort(Opt),
-
+get_connect_opt(Options) ->
 	Active  = get_opt(active, Options),
 	Origin  = get_opt(origin, Options),
 	SubProtocol = get_opt(subprotocol, Options),
@@ -169,13 +168,12 @@ get_connect_opt(Opt) ->
 
 	{Active, Origin, SubProtocol, Timeout}.
 %------------------------------------------------------------------------------
-get_opt(Key, Dict) ->
-	case orddict:find(Key, Dict) of
-		{ok, Value} -> 
-			Value;
-		error -> 
-			default_opt(Key)
-	end.
+get_opt(Key, []) ->
+	default_opt(Key);
+get_opt(Key, [{Key, Value}|_]) ->
+	Value;
+get_opt(Key, [_|Dict]) ->
+	get_opt(Key, Dict).
 %------------------------------------------------------------------------------
 default_opt(active) -> 
 	?DEF_ACTIVE;
