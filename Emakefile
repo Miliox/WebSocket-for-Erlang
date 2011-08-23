@@ -8,3 +8,8 @@ warning_as_errors, report, verbose, export_all]}.
 [debug_info,
 {outdir,"ebin/wslib"},{i, "include"},
 warning_as_errors, report, verbose, export_all]}.
+
+{"src/handler/*",
+[debug_info,
+{outdir,"ebin/handler"},{i, "include"},
+warning_as_errors, report, verbose, export_all]}.

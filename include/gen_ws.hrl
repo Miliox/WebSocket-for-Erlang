@@ -98,6 +98,9 @@
 -define(INFO_RES(Info), ?INFO_RES(self(), Info)).
 %------------------------------------------------------------------------------
 % WebSocket Active Messages
+-define(WS_CONNECT_SIGNAL, {ws_connected, ?WS_FMT(self())}).
+-define(WS_CONNECT_SIGNAL(WebSocket), {ws_connected, WebSocket}).
+
 -define(WS_RECV_SIGNAL(Frame),  {ws, ?WS_FMT(self()), Frame}).
 -define(WS_RECV_SIGNAL(WebSocket, Frame), {ws, WebSocket, Frame}).
 
