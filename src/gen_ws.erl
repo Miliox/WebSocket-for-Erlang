@@ -45,7 +45,7 @@ connect(Url, Opt) when is_list(Url) andalso is_list(Opt) ->
 	case catch(socket:connect(Mode, Address, Port, Timeout)) of
 		{ok, Socket} ->
 			%make_handshake(Url, Origin, SubProtocol, Active, Socket);
-			handler.hixie76:new(Url, Origin, SubProtocol, Active, Socket);
+			{ok, handler.hixie76:new(Url, Origin, SubProtocol, Active, Socket)};
 		?ERROR(Reason, _) ->
 			{error, Reason};
 		?ERROR(Reason) ->
