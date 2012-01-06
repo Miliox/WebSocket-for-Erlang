@@ -59,7 +59,6 @@ handler_wait_response(Socket, Owner, Receiver) ->
 			put_key(response, Handshake),
 			put_key(subprotocol, Handshake),
 
-			io:format("~p", [get()]),
 			handler_main(Socket, Owner, Receiver);
 		{Receiver, error, _Reason} ->
 			Owner ! ?WS_CLOSE_SIGNAL,
@@ -255,8 +254,7 @@ receiver_loop(Socket, Handler, Context, []) ->
 			receiver_unframe(Socket, Handler, Context, Stream);
 		{error, closed} ->
 			Handler ! ?RECV_CLOSE;
-		X ->
-			?print("rcv_loop", X),
+		_IgnoreError ->
 			receiver_loop(Socket, Handler, Context, [])
 	end;
 receiver_loop(Socket, Handler, Context, Buffer) ->

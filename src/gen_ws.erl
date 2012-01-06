@@ -61,7 +61,7 @@ listen(Port) ->
 	listen(Port, ?DEF_LST_OPT).
 listen(Port, Options) when is_list(Options) ->
 	Mode = get_opt(mode, Options),
-	ListenPid = spawn(?MODULE, handler.hixie76.listen, [Port, Mode, self()]),
+	ListenPid = spawn(?MODULE, listen_start, [Port, Mode, self()]),
 	receive
 		?LISTEN_OK(ListenPid) ->
 			{ok, ?WSL_FMT(ListenPid)};
