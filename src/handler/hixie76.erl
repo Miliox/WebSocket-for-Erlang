@@ -2,7 +2,7 @@
 %% TCC1: Trabalho de Conclusao de Curso - 1
 %% Aluno: Emiliano Carlos de Moraes Firmino
 %% Orientador : Prof Jucimar Jr ( jucimar.jr@gmail.com )
-%% Objetivo : <OBJETIVO>
+%% Objetivo : Handler WebSocket Hixie 76
 %% Criado: 08/22/11 12:38:59 (HPC)
 
 %% @author Emiliano Carlos de Moraes Firmino <elmiliox@gmail.com>
@@ -21,9 +21,8 @@
 -import(lists).
 -import(wslib.header).
 -import(wslib.hixie76).
--import(handler.common).
 %------------------------------------------------------------------------------
--export([new/5]).
+-export([new/5, listen/3]).
 %------------------------------------------------------------------------------
 new(Url, Origin, SubProtocol, Active, Socket) ->
 	Config = {Url, Origin, SubProtocol, Active},
@@ -44,8 +43,8 @@ spawn_handler(Socket, Config) ->
 handler_start(Socket, Config, Owner) ->
 	Receiver = spawn_receiver(Socket, Config),
 	set_dict(Config),
-	common:load_info_sock(Socket),
-	handler_wait_handshake(Socket, Owner, Receiver).
+	load_info_sock(Socket),
+	handler_wait_response(Socket, Owner, Receiver).
 %------------------------------------------------------------------------------
 spawn_receiver(Socket, Config) ->
 	Receiver = spawn_link(?MODULE, receiver_start, [Socket, Config, self()]),
@@ -53,11 +52,9 @@ spawn_receiver(Socket, Config) ->
 	
 	Receiver.
 %------------------------------------------------------------------------------
-handler_wait_handshake(Socket, Owner, Receiver) ->
+handler_wait_response(Socket, Owner, Receiver) ->
 	receive
 		{Receiver, ok, Handshake} ->
-			Owner ! ?WS_CONNECT_SIGNAL,
-
 			put_key(request, Handshake),
 			put_key(response, Handshake),
 			put_key(subprotocol, Handshake),
@@ -71,21 +68,21 @@ handler_wait_handshake(Socket, Owner, Receiver) ->
 		% Client Request
 		?ACCEPT_REQ(From, _) ->
 			From ! ?ACCEPT_RES_ERROR(istate),
-			handler_wait_handshake(Socket, Owner, Receiver);
+			handler_wait_response(Socket, Owner, Receiver);
 		?SEND_REQ(From, _) ->
 			From ! ?SEND_RES_ERROR(istate),
-			handler_wait_handshake(Socket, Owner, Receiver);
+			handler_wait_response(Socket, Owner, Receiver);
 		?CHANGE_OWNER(Owner, NewOwner) when is_pid(NewOwner)->
 			Owner ! ?CHANGE_OWNER_OK,
-			handler_wait_handshake(Socket, NewOwner, Receiver);
+			handler_wait_response(Socket, NewOwner, Receiver);
 		?CHANGE_OWNER(From, _) ->
 			From ! ?CHANGE_OWNER_ERROR(not_owner),
-			handler_wait_handshake(Socket, Owner, Receiver);
+			handler_wait_response(Socket, Owner, Receiver);
 		?INFO_REQ(From) ->
 			From ! ?INFO_RES(get()),
-			handler_wait_handshake(Socket, Owner, Receiver);
+			handler_wait_response(Socket, Owner, Receiver);
 		_Other ->
-			handler_wait_handshake(Socket, Owner, Receiver)
+			handler_wait_response(Socket, Owner, Receiver)
 	end.
 %------------------------------------------------------------------------------
 handler_main(Socket, Owner, Receiver) ->
@@ -128,7 +125,7 @@ handler_main(Socket, Owner, Receiver, Messages) ->
 	end.
 %------------------------------------------------------------------------------
 handler_dead() ->
-		handler_dead(queue:new()).
+	handler_dead(queue:new()).
 %------------------------------------------------------------------------------
 handler_dead(Messages) ->
 	receive
@@ -202,7 +199,7 @@ receive_response_error(Socket, Reason) ->
 	{error, Reason}.
 %------------------------------------------------------------------------------
 receive_response_1(Socket, Answer, HandshakeParameter) ->
-	ResponseHeader = common:receive_header(Socket),
+	ResponseHeader = receive_header(Socket),
 	ServerSolution = receive_response_solution(Socket),
 
 	Response = 
@@ -225,7 +222,7 @@ verify_response(ServerSolution, Answer, Socket, HandshakeParameter) ->
 	end.	
 %------------------------------------------------------------------------------
 receive_response_solution(Socket) ->
-	common:receive_len(Socket, ?SOLUTION_LEN, []).
+	receive_len(Socket, ?SOLUTION_LEN, []).
 %------------------------------------------------------------------------------
 handler_loop_recv(Msg, Owner, MailBox) ->
 	case get(active) of
@@ -287,3 +284,183 @@ receiver_unframe(Socket, Handler, Context, Stream) ->
 			?print("error", X)
 	end.
 %------------------------------------------------------------------------------
+listen(Port, Mode, Owner) ->
+	case catch(socket:listen(Mode, Port)) of
+		{ok, Listen} ->
+			Owner ! ?LISTEN_OK,
+			listen_loop(Listen, Owner);
+		{error, Reason} ->
+			Owner ! ?LISTEN_ERROR(Reason);
+		?ERROR(Reason, _) ->
+			Owner ! ?LISTEN_ERROR(Reason);
+		?ERROR(Reason) ->
+			Owner ! ?LISTEN_ERROR(Reason)
+	end.
+%------------------------------------------------------------------------------
+listen_loop(Listen, Owner) ->
+receive
+	?ACCEPT_REQ(From, Timeout) ->
+		accept_socket(Listen, From, Timeout),
+		listen_loop(Listen, Owner);
+	?CHANGE_OWNER(Owner, NewOwner) ->
+		Owner ! ?CHANGE_OWNER_OK,
+		listen_loop(Listen, NewOwner);
+	?CHANGE_OWNER(From, _) ->
+		From ! ?CHANGE_OWNER_ERROR(not_owner),
+		listen_loop(Listen, Owner);
+	?INFO_REQ(From) ->
+		From ! ?INFO_RES(get()),
+		listen_loop(Listen, Owner);
+	?CLOSE_REQ ->
+		socket:close(Listen),
+		Owner ! ?WS_CLOSE_SIGNAL,
+		listen_dead();
+	_Other ->
+		listen_loop(Listen, Owner)
+end.
+%------------------------------------------------------------------------------			
+listen_dead() ->
+	handler_dead().
+%------------------------------------------------------------------------------
+accept_socket(Listen, SocketOwner, Timeout) ->
+	case socket:accept(Listen, Timeout) of
+		{ok, Socket} ->
+			accept_request(Socket, SocketOwner);
+		{error, Reason} ->
+			SocketOwner ! ?ACCEPT_RES_ERROR(Reason)
+	end.
+%------------------------------------------------------------------------------
+accept_request(Socket, SocketOwner) ->
+	Reply = 
+	case catch(accept_request_1(Socket, SocketOwner)) of
+		?ERROR(Reason, _) ->
+			accept_request_error(Socket, Reason);
+		?ERROR(Reason) ->
+			accept_request_error(Socket, Reason);
+		WebSocket ->
+			?ACCEPT_RES_OK(WebSocket)
+	end,
+	SocketOwner ! Reply.
+%------------------------------------------------------------------------------
+accept_request_error(Socket, Reason) ->
+	socket:send(Socket, ?RESPONSE_ERROR),
+	socket:close(Socket),
+
+	?ACCEPT_RES_ERROR(Reason).
+%------------------------------------------------------------------------------
+accept_request_1(Socket, SocketOwner) ->
+	RequestHeader = receive_header(Socket),
+	Key3 = receive_key3(Socket),
+
+	Request = header:parse(RequestHeader ++ Key3),
+	Response = wslib.hixie76:gen_response(Request, socket:mode(Socket)),
+
+	SubProtocol = wslib.hixie76:get_subprotocol(Response),
+
+	ResponseHeader = header:to_string(Response),
+	case socket:send(Socket, ResponseHeader) of
+		ok ->
+			accept_socket_ok(
+				Socket, SocketOwner, 
+				{Request, Response, SubProtocol});
+		{error, Reason} ->
+			erlang:error(Reason)
+	end.
+%------------------------------------------------------------------------------
+receive_key3(Socket) ->
+	receive_len(Socket, ?KEY3_LEN, []).
+%------------------------------------------------------------------------------
+accept_socket_ok(Socket, SocketOwner, {Request, Response, SubProtocol}) ->
+	HandlerParam = [
+		{active, false},
+		{request, Request},
+		{response, Response},
+		{subprotocol, SubProtocol}],
+	
+	create_websocket(Socket, HandlerParam, SocketOwner).
+%------------------------------------------------------------------------------
+receive_header(Socket) ->
+	receive_header_loop(Socket, [], 0).
+%------------------------------------------------------------------------------
+% Header Loop Termina quanto encontrar CRLFCRLF
+receive_header_loop(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+		{ok, ?CR}  -> 
+			receive_header_loop_1(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		{error, Reason} -> 
+			erlang:error(Reason)
+	end;
+receive_header_loop(_, _, _) ->
+	erlang:error(header).
+%------------------------------------------------------------------------------
+% Falta LFCRLF
+receive_header_loop_1(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+		{ok, ?LF}  -> 
+			receive_header_loop_2(Socket, ?LF++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		{error, Reason} -> 
+			erlang:error(Reason)
+	end;
+receive_header_loop_1(_, _, _) ->
+	erlang:error(header).
+%------------------------------------------------------------------------------
+% Falta CRLF
+receive_header_loop_2(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+		{ok, ?CR}  -> 
+			receive_header_loop_3(Socket, ?CR++RevBuffer, Len+1);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		{error, Reason} -> 
+			erlang:error(Reason)
+	end;
+receive_header_loop_2(_, _, _) ->
+	erlang:error(header).
+%------------------------------------------------------------------------------
+% Falta LF
+receive_header_loop_3(Socket, RevBuffer, Len) 
+when Len < ?MAX_HEADER_LEN ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+		{ok, ?LF}  -> 
+			lists:reverse(?LF++RevBuffer);
+		{ok, Char} -> 
+			receive_header_loop(Socket, Char++RevBuffer, Len+1);
+		{error, Reason} -> 
+			erlang:error(Reason)
+	end;
+receive_header_loop_3(_, _, _) ->
+	erlang:error(header).
+%------------------------------------------------------------------------------
+receive_len(_, Len, RevBuffer) when Len =< 0 ->
+	lists:reverse(RevBuffer);
+receive_len(Socket, Len, RevBuffer) ->
+	case socket:recv(Socket, ?ONLY_ONE, ?HEADER_TIMEOUT) of
+		{ok, Byte} -> 
+			receive_len(Socket, Len-1, Byte++RevBuffer);
+		{error, Reason} -> 
+			erlang:error(Reason)
+	end.
+%------------------------------------------------------------------------------
+load_info_sock(Socket) ->
+	{HostAddr, HostPort} = socket:sockname(Socket),
+	{PeerAddr, PeerPort} = socket:peername(Socket),
+
+	put(host_addr, HostAddr),
+	put(peer_addr, PeerAddr),
+	put(host_port, HostPort),
+	put(peer_port, PeerPort).
+%------------------------------------------------------------------------------
+create_websocket(Socket, HandlerParameter) ->
+	create_websocket(Socket, HandlerParameter, self()).
+create_websocket(Socket, HandlerParameter, Owner) ->
+	HandlerPid = spawn(?MODULE, handler_start, [Socket, Owner, HandlerParameter]),
+	socket:controlling_process(Socket, HandlerPid),
+
+	?WS_FMT(HandlerPid).

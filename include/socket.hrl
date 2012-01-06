@@ -2,7 +2,7 @@
 %% TCC1: Trabalho de Conclusao de Curso - 1
 %% Aluno : Emiliano Carlos de Moraes Firmino ( elmiliox@gmail.com )
 %% Orientador : Prof Jucimar Jr ( jucimar.jr@gmail.com )
-%% Objetivo : <OBJETIVO>
+%% Objetivo : Macros usadas no Adapter socket
 %% Criado: 06/28/11 10:56:25 (HPC)
 
 % SSL Messages

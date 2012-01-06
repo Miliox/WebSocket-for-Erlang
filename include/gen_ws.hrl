@@ -2,7 +2,7 @@
 %% TCC1: Trabalho de Conclusao de Curso - 1
 %% Aluno : Emiliano Carlos de Moraes Firmino ( elmiliox@gmail.com )
 %% Orientador : Prof Jucimar Jr ( jucimar.jr@gmail.com )
-%% Objetivo : <OBJETIVO>
+%% Objetivo : Formato padronizado de estruturas de dados de gen_ws
 %% Criado: 06/13/11 21:17:39 (HPC)
 
 %------------------------------------------------------------------------------
