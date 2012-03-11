@@ -1,0 +1,17 @@
+Extensible WebSocket implementation for Erlang
+
+Compile:
+	make all
+
+Run test:
+	make test
+
+How to Use:
+Erlang Terminal-Client WebSocket-76:
+	{ok, Ws} = gen_ws:connect("ws://echo.websocket.org"),
+	gen_ws:send(Ws, "Hello World!"),
+	{ok, "Hello World!"} = gen_ws:recv(Ws),
+	gen_ws:close(Ws).
+	
+Erlang Terminal-Server:
+	TODO
